@@ -1,6 +1,9 @@
+import uvicorn
 from fastapi import FastAPI, Query, status, Request, Depends, HTTPException
 from contextlib import asynccontextmanager
 from typing import Annotated
+from sys import argv
+from pathlib import Path
 
 from DataBase import SQLiteORM
 
@@ -14,16 +17,56 @@ from RequestModels import (
 )
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    app.state.db = SQLiteORM()
-    yield
+def get_arguments() -> set[bool, str | None]:
+    print(argv)
+    if len(argv) <= 1:
+        return False, None
+    
+    reset = False
+    path = None
+    i = 0
 
-    app.state.db.close()
+    while i < len(argv):
+        arg = argv[i]
+
+        if arg == "--reset":
+            reset = True
+
+        if arg == "--path":
+            if not (i + 1 < len(argv)):
+                raise ValueError("Data path is not specified.")
+            
+            file_path = Path(argv[i+1])
+
+            if not file_path.is_file():
+                raise ValueError(f"{file_path} is either missing or not a file.")
+            
+            if file_path.suffix != ".csv":
+                raise ValueError("File extension is not '.csv'.")
+            
+            path = file_path
+            i += 1
+        
+        i += 1
+            
+    return reset, path
 
 
 async def get_database(request: Request) -> SQLiteORM:
     return request.app.state.db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    reset, path = get_arguments()
+    # reset, path = False, None
+    app.state.db = SQLiteORM(reset=reset)
+    if path is not None:
+        app.state.db.load_data(path)
+    
+    yield
+
+    app.state.db.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -152,3 +195,7 @@ async def get_district_names(db: Annotated[SQLiteORM, Depends(get_database)]):
             detail="There is no districts")
     
     return {"areas": areas}
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

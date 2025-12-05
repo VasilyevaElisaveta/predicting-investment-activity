@@ -38,7 +38,7 @@ class AreaType(StrEnum):
 class SQLiteORM:
 
     def __init__(self, reset: bool=False, detail: bool=False):
-        self.__engine = create_engine("sqlite:///API/regions.db", echo=detail)
+        self.__engine = create_engine("sqlite:///app/regions.db", echo=detail)
         self.__sync_session = sessionmaker(self.__engine)
 
         if reset:
