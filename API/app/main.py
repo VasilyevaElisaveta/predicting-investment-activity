@@ -5,9 +5,9 @@ from typing import Annotated
 from sys import argv
 from pathlib import Path
 
-from DataBase import SQLiteORM
+from .DataBase import DataBase
 
-from RequestModels import (
+from .RequestModels import (
     RegionRequest, RegionResponse, 
     DistrictRequest, DistrictResponse,
     FeatureRequest, FeatureResponse,
@@ -17,17 +17,18 @@ from RequestModels import (
 )
 
 
-def get_arguments() -> set[bool, str | None]:
-    print(argv)
-    if len(argv) <= 1:
-        return False, None
-    
+def get_arguments() -> tuple[bool, bool, bool, str | None]:
+    is_async = True  
     reset = False
+    detail = False
     path = None
-    i = 0
 
+    i = 0
     while i < len(argv):
         arg = argv[i]
+
+        if arg == "--sync":
+            is_async = False
 
         if arg == "--reset":
             reset = True
@@ -44,23 +45,26 @@ def get_arguments() -> set[bool, str | None]:
             if file_path.suffix != ".csv":
                 raise ValueError("File extension is not '.csv'.")
             
+            reset = True
             path = file_path
             i += 1
+
+        if arg == "--detail":
+            detail = True
         
         i += 1
             
-    return reset, path
+    return is_async, reset, detail, path
 
 
-async def get_database(request: Request) -> SQLiteORM:
+async def get_database(request: Request) -> DataBase:
     return request.app.state.db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    reset, path = get_arguments()
-    # reset, path = False, None
-    app.state.db = SQLiteORM(reset=reset)
+    is_async, reset, detail,  path = get_arguments()
+    app.state.db = DataBase(is_async=is_async, reset=reset, detail=detail)
     if path is not None:
         app.state.db.load_data(path)
     
@@ -76,7 +80,7 @@ app = FastAPI(lifespan=lifespan)
          description="Get overview statistics about the region by year",
          response_model=RegionResponse,
          status_code=status.HTTP_200_OK)
-async def get_region_info(query_params: Annotated[RegionRequest, Query()], db: Annotated[SQLiteORM, Depends(get_database)]):
+async def get_region_info(query_params: Annotated[RegionRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
     region = db.get_region_info(
         id=query_params.id,
         year=query_params.year
@@ -92,7 +96,7 @@ async def get_region_info(query_params: Annotated[RegionRequest, Query()], db: A
          description="Get overview statistics about the district by year",
          response_model=DistrictResponse,
          status_code=status.HTTP_200_OK)
-async def get_district_info(query_params: Annotated[DistrictRequest, Query()], db: Annotated[SQLiteORM, Depends(get_database)]):
+async def get_district_info(query_params: Annotated[DistrictRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
     district = db.get_region_info(
         id=query_params.id,
         year=query_params.year
@@ -108,7 +112,7 @@ async def get_district_info(query_params: Annotated[DistrictRequest, Query()], d
          description="Get information about a specific feature by regions or districts",
          response_model=FeatureResponse,
          status_code=status.HTTP_200_OK)
-async def get_feature_info(query_params: Annotated[FeatureRequest, Query()], db: Annotated[SQLiteORM, Depends(get_database)]):
+async def get_feature_info(query_params: Annotated[FeatureRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
     features = db.get_feature_info(
         feature=query_params.feature,
         year=query_params.year,
@@ -130,7 +134,7 @@ async def get_feature_info(query_params: Annotated[FeatureRequest, Query()], db:
          description="Get overview statistics by regions or districts",
          response_model=StatisticsResponse,
          status_code=status.HTTP_200_OK)
-async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db: Annotated[SQLiteORM, Depends(get_database)]):
+async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
     data = db.get_statistic(
         required_columns=query_params.required_columns,
         year=query_params.year,
@@ -155,7 +159,7 @@ async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db
          description="Get a graph of feature by year",
          response_model=FeatureGraphsResponse,
          status_code=status.HTTP_200_OK)
-async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query()], db: Annotated[SQLiteORM, Depends(get_database)]):
+async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
     data = db.get_feature_graphs(aggregation_type=query_params.aggregation_type)
     if len(data) == 0:
         raise HTTPException(
@@ -174,7 +178,7 @@ async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query
          description="Get region names",
          response_model=AreasResponse,
          status_code=status.HTTP_200_OK)
-async def get_region_names(db: Annotated[SQLiteORM, Depends(get_database)]):
+async def get_region_names(db: Annotated[DataBase, Depends(get_database)]):
     areas = db.get_areas()
     if len(areas) == 0:
         raise HTTPException(
@@ -187,7 +191,7 @@ async def get_region_names(db: Annotated[SQLiteORM, Depends(get_database)]):
          description="Get district names",
          response_model=AreasResponse,
          status_code=status.HTTP_200_OK)
-async def get_district_names(db: Annotated[SQLiteORM, Depends(get_database)]):
+async def get_district_names(db: Annotated[DataBase, Depends(get_database)]):
     areas = db.get_areas(are_districts=True)
     if len(areas) == 0:
         raise HTTPException(

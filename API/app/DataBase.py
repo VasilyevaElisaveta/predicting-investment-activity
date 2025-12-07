@@ -3,8 +3,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select, and_, func
 
 import pandas as pd
+import tempfile
 
-from DataBaseModels import Base, Statistics, Regions, Districts
+from .DataBaseModels import Base, Statistics, Regions, Districts
 
 from enum import StrEnum
 
@@ -35,11 +36,20 @@ class AreaType(StrEnum):
     DISTRICT = "district"
 
 
-class SQLiteORM:
+class DataBase:
+    __SYNC_PATH_BASE = "sqlite:///"
 
-    def __init__(self, reset: bool=False, detail: bool=False):
-        self.__engine = create_engine("sqlite:///app/regions.db", echo=detail)
-        self.__sync_session = sessionmaker(self.__engine)
+    def __init__(self, is_async: bool=True, reset: bool=False, detail: bool=False):
+        self.__is_async = is_async
+        if self.__is_async:
+            raise ValueError("Is in work")
+        else:
+            self.__temp_db_dir = tempfile.TemporaryDirectory()
+            self.__engine = create_engine(
+                DataBase.__SYNC_PATH_BASE + self.__temp_db_dir.name + "/temp.db",
+                echo=detail
+            )
+            self.__session = sessionmaker(self.__engine)
 
         if reset:
             Base.metadata.drop_all(self.__engine)
@@ -47,6 +57,9 @@ class SQLiteORM:
 
     def close(self):
         self.__engine.dispose()
+
+        if not self.__is_async:
+            self.__temp_db_dir.cleanup()
 
     @staticmethod
     def __aggregate_feature(orm_feature, aggregation_type: str):
@@ -80,7 +93,7 @@ class SQLiteORM:
             path (str): Path to CSV file
         """
         df = pd.read_csv(path)
-        with self.__sync_session() as session:
+        with self.__session() as session:
             instances = []
             prev_region = None
             prev_region_id = None
@@ -145,7 +158,7 @@ class SQLiteORM:
     def get_region_info(self, id: int, year: int) -> dict[str, str | int| float] | None:
 
         columns = [getattr(Statistics, col.value) for col in ColumnName]
-        with self.__sync_session() as session:
+        with self.__session() as session:
             query = (
                 select(Regions.region_name, Districts.district_name, *columns)
                 .filter(Statistics.region_id==id, Statistics.year==year)
@@ -160,9 +173,9 @@ class SQLiteORM:
 
     def get_district_info(self, id: int, year: int, aggregation_type: str) -> dict[str, str | int| float] | None:
         columns = [(col, getattr(Statistics, col.value)) for col in ColumnName]
-        aggr_columns = [SQLiteORM.__aggregate_feature(orm_col, aggregation_type).label(col_name) for col_name, orm_col in columns]
+        aggr_columns = [DataBase.__aggregate_feature(orm_col, aggregation_type).label(col_name) for col_name, orm_col in columns]
 
-        with self.__sync_session() as session:
+        with self.__session() as session:
             query = (
                 select(Districts.district_name, *aggr_columns)
                 .filter_by(district_id=id, year=year)
@@ -187,11 +200,11 @@ class SQLiteORM:
             max_value: int
         ) -> tuple[str, list[dict[str, str | float]]]:
 
-        with self.__sync_session() as session:
+        with self.__session() as session:
             orm_feature = getattr(Statistics, feature)
 
             if is_by_district:
-                arrg_orm_feature = SQLiteORM.__aggregate_feature(orm_feature, aggregation_type)
+                arrg_orm_feature = DataBase.__aggregate_feature(orm_feature, aggregation_type)
                 sub_query = (
                     select(
                         Statistics.district_id.label("area_id"),
@@ -272,10 +285,10 @@ class SQLiteORM:
             aggregation_type: str=None
         ) -> list[dict[str, str | float]]:
 
-        with self.__sync_session() as session:
+        with self.__session() as session:
             if is_by_district:
                 columns = [(col, getattr(Statistics, col)) for col in required_columns]
-                aggr_columns = [SQLiteORM.__aggregate_feature(orm_col, aggregation_type).label(col_name) for col_name, orm_col in columns]
+                aggr_columns = [DataBase.__aggregate_feature(orm_col, aggregation_type).label(col_name) for col_name, orm_col in columns]
 
                 query = (
                     select(
@@ -307,9 +320,9 @@ class SQLiteORM:
 
     def get_feature_graphs(self, aggregation_type: str='avg') -> list[dict[str, int | float]]:
 
-        with self.__sync_session() as session:
+        with self.__session() as session:
             columns = [(col, getattr(Statistics, col.value)) for col in ColumnName]
-            aggr_columns = [SQLiteORM.__aggregate_feature(orm_col, aggregation_type).label(col_name) for col_name, orm_col in columns]
+            aggr_columns = [DataBase.__aggregate_feature(orm_col, aggregation_type).label(col_name) for col_name, orm_col in columns]
             
             query = (
                 select(
@@ -322,7 +335,7 @@ class SQLiteORM:
             return result
         
     def get_areas(self, are_districts: bool=False) -> list[dict[str, int | str]]:
-        with self.__sync_session() as session:
+        with self.__session() as session:
             if are_districts:
                 query = select(Districts.id, Districts.district_name.label("area_name"))
             else:
