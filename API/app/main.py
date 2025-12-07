@@ -136,7 +136,7 @@ async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db
 
     return {"area_type": area_type, "table": table}
 
-@app.get('/downdload-statistics/',
+@app.get('/download-statistics/',
          description="Download overview statistics by regions or districts",
          status_code=status.HTTP_200_OK)
 async def download_statistics(query_params: Annotated[StaticticsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
