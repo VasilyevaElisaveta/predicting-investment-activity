@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, model_validator
 
-from .DataBase import AggregationType, ColumnName, AreaType
+from .database import AggregationType, ColumnName, AreaType
 
 from typing import Self
 
@@ -8,6 +8,7 @@ from typing import Self
 MIN_YEAR = 2018
 MAX_YEAR = 2022
 
+MIN_ID = 1
 MIN_FILTER_VALUE = 0
 
 
@@ -16,7 +17,7 @@ class RegionRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     id: int = Field(
-        ge=1,
+        ge=MIN_ID,
         title="Region ID",
     )
     year: int = Field(

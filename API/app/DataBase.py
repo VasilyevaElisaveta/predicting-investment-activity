@@ -5,7 +5,7 @@ from sqlalchemy import select, and_, func
 import pandas as pd
 import tempfile
 
-from .DataBaseModels import Base, Statistics, Regions, Districts
+from .databasemodels import Base, Statistics, Regions, Districts
 
 from enum import StrEnum
 
