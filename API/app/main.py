@@ -1,13 +1,17 @@
 import uvicorn
 from fastapi import FastAPI, Query, status, Request, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 from typing import Annotated
-from sys import argv
+
+import argparse
 from pathlib import Path
+from io import StringIO
+import pandas as pd
 
-from .DataBase import DataBase
+from .database import DataBase
 
-from .RequestModels import (
+from .requestmodels import (
     RegionRequest, RegionResponse, 
     DistrictRequest, DistrictResponse,
     FeatureRequest, FeatureResponse,
@@ -17,55 +21,32 @@ from .RequestModels import (
 )
 
 
-def get_arguments() -> tuple[bool, bool, bool, str | None]:
-    is_async = True  
-    reset = False
-    detail = False
-    path = None
-
-    i = 0
-    while i < len(argv):
-        arg = argv[i]
-
-        if arg == "--sync":
-            is_async = False
-
-        if arg == "--reset":
-            reset = True
-
-        if arg == "--path":
-            if not (i + 1 < len(argv)):
-                raise ValueError("Data path is not specified.")
-            
-            file_path = Path(argv[i+1])
-
-            if not file_path.is_file():
-                raise ValueError(f"{file_path} is either missing or not a file.")
-            
-            if file_path.suffix != ".csv":
-                raise ValueError("File extension is not '.csv'.")
-            
-            reset = True
-            path = file_path
-            i += 1
-
-        if arg == "--detail":
-            detail = True
-        
-        i += 1
-            
-    return is_async, reset, detail, path
-
-
 async def get_database(request: Request) -> DataBase:
     return request.app.state.db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    is_async, reset, detail,  path = get_arguments()
-    app.state.db = DataBase(is_async=is_async, reset=reset, detail=detail)
+    parser = argparse.ArgumentParser("Database configuration parser")
+    parser.add_argument("--sync", action="store_false")
+    parser.add_argument("--reset", action="store_true")
+    parser.add_argument("--detail", action="store_true")
+    parser.add_argument("--path", nargs="?")
+    args = parser.parse_args()
+    is_async, reset, detail, path = args.sync, args.reset, args.detail, args.path
     if path is not None:
+        reset = True
+
+    app.state.db = DataBase(is_async=is_async, reset=reset, detail=detail)
+
+    if path is not None:
+        file_path = Path(path)
+        if not file_path.is_file():
+            raise ValueError(f"{file_path} is either missing or not a file.")
+        
+        if file_path.suffix != ".csv":
+            raise ValueError("File extension is not '.csv'.")
+        
         app.state.db.load_data(path)
     
     yield
@@ -155,6 +136,41 @@ async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db
 
     return {"area_type": area_type, "table": table}
 
+@app.get('/downdload-statistics/',
+         description="Download overview statistics by regions or districts",
+         status_code=status.HTTP_200_OK)
+async def download_statistics(query_params: Annotated[StaticticsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
+    data = db.get_statistic(
+        required_columns=query_params.required_columns,
+        year=query_params.year,
+        is_by_district=query_params.is_by_district,
+        aggregation_type=query_params.aggregation_type
+    )
+    if len(data) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="There is no data"
+        )
+    
+    table = {col_name: [] for col_name in data[0].keys()}
+    for elem in data:
+        for key, value in elem.items():
+            table[key].append(value)
+
+    buffer = StringIO()
+    dataframe = pd.DataFrame(table)
+    dataframe.to_csv(buffer, index=False, encoding="utf-8-sig")
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": 'attachment; filename="statistics.csv"'
+        }
+    )
+
+
 @app.get("/feature-graphs/",
          description="Get a graph of feature by year",
          response_model=FeatureGraphsResponse,
@@ -202,4 +218,4 @@ async def get_district_names(db: Annotated[DataBase, Depends(get_database)]):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
