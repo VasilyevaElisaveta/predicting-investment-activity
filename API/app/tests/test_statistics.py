@@ -13,7 +13,7 @@ REQUIRED_COLUMNS = [
     "cash_expenses",
     "scientific_research"
 ]
-YEAR = 2019
+YEAR = 2018
 IS_BY_DISTRICT = True
 AGGREGATION_TYPE = "min"
 
@@ -42,7 +42,7 @@ class TestSuccessCases:
 
     def test_get_data_by_region(self, client):
 
-        by_region_response = client.get(f"/statistics/?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}")
+        by_region_response = client.get(f"/statistics/?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}&is_by_district=false")
         assert by_region_response.status_code == StatusCode.Success
 
         StatisticsResponse(**by_region_response.json())

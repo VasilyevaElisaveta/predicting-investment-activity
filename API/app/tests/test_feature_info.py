@@ -8,7 +8,7 @@ IS_BY_DISTRICT = True
 AGGREGATION_TYPE = "min"
 USE_FILTER = True
 MIN_FILTER_VALUE = 1
-MAX_FILTER_VALUE = 1000
+MAX_FILTER_VALUE = 99999999
 
 
 class TestSuccessCases:
@@ -70,3 +70,8 @@ class TestFailureCases:
         wrong_min_value_response = client.get(f"/feature-info/?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}&min_filter_value={wrong_min_value}")
         assert wrong_min_value_response.status_code == StatusCode.ValidationError
 
+        equal_values_response = client.get(f"/feature-info/?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}&min_filter_value={MIN_FILTER_VALUE}&max_filter_value={MIN_FILTER_VALUE}")
+        assert equal_values_response.status_code == StatusCode.ValidationError
+
+        no_possible_data_response = client.get(f"/feature-info/?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}&min_filter_value={MIN_FILTER_VALUE}&max_filter_value={MIN_FILTER_VALUE + 1}")
+        assert no_possible_data_response.status_code == StatusCode.NotFound

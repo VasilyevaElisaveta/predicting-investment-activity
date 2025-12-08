@@ -28,16 +28,16 @@ async def get_database(request: Request) -> DataBase:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     parser = argparse.ArgumentParser("Database configuration parser")
-    parser.add_argument("--sync", action="store_false")
+    parser.add_argument("--sync", action="store_true")
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--detail", action="store_true")
     parser.add_argument("--path", nargs="?")
     args = parser.parse_args()
-    is_async, reset, detail, path = args.sync, args.reset, args.detail, args.path
+    is_sync, reset, detail, path = args.sync, args.reset, args.detail, args.path
     if path is not None:
         reset = True
 
-    app.state.db = DataBase(is_async=is_async, reset=reset, detail=detail)
+    app.state.db = DataBase(is_sync=is_sync, reset=reset, detail=detail)
 
     if path is not None:
         file_path = Path(path)
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
         if file_path.suffix != ".csv":
             raise ValueError("File extension is not '.csv'.")
         
-        app.state.db.load_data(path)
+        await app.state.db.load_data(path)
     
     yield
 
@@ -62,7 +62,7 @@ app = FastAPI(lifespan=lifespan)
          response_model=RegionResponse,
          status_code=status.HTTP_200_OK)
 async def get_region_info(query_params: Annotated[RegionRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
-    region = db.get_region_info(
+    region = await db.get_region_info(
         id=query_params.id,
         year=query_params.year
     )
@@ -78,9 +78,10 @@ async def get_region_info(query_params: Annotated[RegionRequest, Query()], db: A
          response_model=DistrictResponse,
          status_code=status.HTTP_200_OK)
 async def get_district_info(query_params: Annotated[DistrictRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
-    district = db.get_region_info(
+    district = await db.get_district_info(
         id=query_params.id,
-        year=query_params.year
+        year=query_params.year,
+        aggregation_type=query_params.aggregation_type
     )
     if district is None:
         raise HTTPException(
@@ -94,7 +95,7 @@ async def get_district_info(query_params: Annotated[DistrictRequest, Query()], d
          response_model=FeatureResponse,
          status_code=status.HTTP_200_OK)
 async def get_feature_info(query_params: Annotated[FeatureRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
-    features = db.get_feature_info(
+    features = await db.get_feature_info(
         feature=query_params.feature,
         year=query_params.year,
         is_by_district=query_params.is_by_district,
@@ -116,7 +117,7 @@ async def get_feature_info(query_params: Annotated[FeatureRequest, Query()], db:
          response_model=StatisticsResponse,
          status_code=status.HTTP_200_OK)
 async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
-    data = db.get_statistic(
+    data = await db.get_statistic(
         required_columns=query_params.required_columns,
         year=query_params.year,
         is_by_district=query_params.is_by_district,
@@ -140,7 +141,7 @@ async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db
          description="Download overview statistics by regions or districts",
          status_code=status.HTTP_200_OK)
 async def download_statistics(query_params: Annotated[StaticticsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
-    data = db.get_statistic(
+    data = await db.get_statistic(
         required_columns=query_params.required_columns,
         year=query_params.year,
         is_by_district=query_params.is_by_district,
@@ -176,7 +177,7 @@ async def download_statistics(query_params: Annotated[StaticticsRequest, Query()
          response_model=FeatureGraphsResponse,
          status_code=status.HTTP_200_OK)
 async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
-    data = db.get_feature_graphs(aggregation_type=query_params.aggregation_type)
+    data = await db.get_feature_graphs(aggregation_type=query_params.aggregation_type)
     if len(data) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -195,7 +196,7 @@ async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query
          response_model=AreasResponse,
          status_code=status.HTTP_200_OK)
 async def get_region_names(db: Annotated[DataBase, Depends(get_database)]):
-    areas = db.get_areas()
+    areas = await db.get_areas()
     if len(areas) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -208,7 +209,7 @@ async def get_region_names(db: Annotated[DataBase, Depends(get_database)]):
          response_model=AreasResponse,
          status_code=status.HTTP_200_OK)
 async def get_district_names(db: Annotated[DataBase, Depends(get_database)]):
-    areas = db.get_areas(are_districts=True)
+    areas = await db.get_areas(are_districts=True)
     if len(areas) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

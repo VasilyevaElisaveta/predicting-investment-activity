@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+from asyncio import run
 from enum import IntEnum
 from app.main import app, get_database
 from app.database import DataBase
@@ -14,8 +15,8 @@ class StatusCode(IntEnum):
 class FakeDataBase:
     def __init__(self):
 
-        self.db = DataBase(is_async=False, reset=True)
-        self.db.load_data("app/tests/test_data.csv")
+        self.db = DataBase(is_sync=True, reset=True)
+        run(self.db.load_data("app/tests/test_data.csv"))
 
 
 @pytest.fixture(scope="session")

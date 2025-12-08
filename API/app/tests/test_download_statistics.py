@@ -12,7 +12,7 @@ REQUIRED_COLUMNS = [
     "cash_expenses",
     "scientific_research"
 ]
-YEAR = 2019
+YEAR = 2018
 IS_BY_DISTRICT = True
 AGGREGATION_TYPE = "min"
 

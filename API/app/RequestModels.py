@@ -139,7 +139,7 @@ class FeatureObject(BaseModel):
     feature_value: float = Field(
         title="Feature value"
     )
-    feature_ratio: float = Field(
+    feature_ratio: float | None = Field(
         title="Feature ratio"
     )
 
@@ -194,7 +194,7 @@ class DistrictsTable(BaseModel):
         default=None,
         title="GRP list"
     )
-    population: list[int] | None = Field(
+    population: list[float] | None = Field(
         default=None,
         title="Population list"
     )
@@ -262,7 +262,7 @@ class GraphObject(BaseModel):
     grp: list[float] = Field(
         title="GRP list"
     )
-    population: list[int] = Field(
+    population: list[float] = Field(
         title="Population list"
     )
     unemployment: list[float] = Field(
