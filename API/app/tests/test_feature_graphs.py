@@ -1,5 +1,5 @@
 from .testconf import StatusCode, client, test_db
-from ..requestmodels import FeatureGraphsResponse
+from ..RequestModels import FeatureGraphsResponse
 
 
 AGGREGATION_TYPE = "min"

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, model_validator
 
-from .database import AggregationType, ColumnName, AreaType
+from .Database import AggregationType, ColumnName, AreaType
 
 from typing import Self
 

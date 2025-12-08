@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from asyncio import run
 from enum import IntEnum
 from app.main import app, get_database
-from app.database import DataBase
+from app.Database import DataBase
 
 
 class StatusCode(IntEnum):

@@ -1,5 +1,5 @@
 from .testconf import StatusCode, client, test_db
-from ..requestmodels import AreasResponse
+from ..RequestModels import AreasResponse
 
 
 class TestSuccessCases:

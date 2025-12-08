@@ -1,5 +1,5 @@
 from .testconf import StatusCode, client, test_db
-from ..requestmodels import FeatureResponse, MIN_FILTER_VALUE as min_filter_value
+from ..RequestModels import FeatureResponse, MIN_FILTER_VALUE as min_filter_value
 
 
 FEATURE = "investments"

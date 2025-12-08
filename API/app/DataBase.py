@@ -9,7 +9,7 @@ from os import getenv
 from dotenv import load_dotenv
 from enum import StrEnum
 
-from .databasemodels import Base, Statistics, Regions, Districts
+from .DatabaseModels import Base, Statistics, Regions, Districts
 
 
 load_dotenv("...env")

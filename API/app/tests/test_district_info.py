@@ -1,5 +1,5 @@
 from .testconf import StatusCode, client, test_db
-from ..requestmodels import MIN_YEAR, MAX_YEAR, MIN_ID, DistrictResponse
+from ..RequestModels import MIN_YEAR, MAX_YEAR, MIN_ID, DistrictResponse
 
 
 ID = 1

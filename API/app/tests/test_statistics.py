@@ -1,5 +1,5 @@
 from .testconf import StatusCode, client, test_db
-from ..requestmodels import StatisticsResponse
+from ..RequestModels import StatisticsResponse
 
 
 REQUIRED_COLUMNS = [
