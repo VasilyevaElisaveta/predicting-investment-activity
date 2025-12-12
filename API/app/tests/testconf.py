@@ -15,7 +15,8 @@ class StatusCode(IntEnum):
 class FakeDataBase:
     def __init__(self):
 
-        self.db = DataBase(is_sync=True, reset=True)
+        self.db = DataBase(is_sync=True)
+        run(self.db.reset())
         run(self.db.load_data("app/tests/test_data.csv"))
 
 

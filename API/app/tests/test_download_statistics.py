@@ -1,4 +1,5 @@
 from .testconf import StatusCode, client, test_db
+from ..main import V1_PREFIX
 
 
 REQUIRED_COLUMNS = [
@@ -20,7 +21,7 @@ AGGREGATION_TYPE = "min"
 class TestSuccessfulCases:
 
     def test_download(self, client):
-        url = "/download-statistics/?"
+        url = f"{V1_PREFIX}/download-statistics/?"
 
         for column in REQUIRED_COLUMNS:
             url += f"required_columns={column}&"
@@ -37,26 +38,26 @@ class TestFailureCases:
 
     def test_data_lack(self, client):
         
-        no_data_response = client.get("/statistics/")
+        no_data_response = client.get(f"{V1_PREFIX}/download-statistics/")
         assert no_data_response.status_code == StatusCode.ValidationError
 
-        no_columns_response = client.get(f"/feature-info/?year={YEAR}")
+        no_columns_response = client.get(f"{V1_PREFIX}/download-statistics/?year={YEAR}")
         assert no_columns_response.status_code == StatusCode.ValidationError
 
-        no_year_response = client.get(f"/feature-info/?required_columns={REQUIRED_COLUMNS[0]}")
+        no_year_response = client.get(f"{V1_PREFIX}/download-statistics/?required_columns={REQUIRED_COLUMNS[0]}")
         assert no_year_response.status_code == StatusCode.ValidationError
 
-        no_aggregation_type_response = client.get(f"/statistics/?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}&is_by_district={IS_BY_DISTRICT}")
+        no_aggregation_type_response = client.get(f"{V1_PREFIX}/download-statistics/?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}&is_by_district={IS_BY_DISTRICT}")
         assert no_aggregation_type_response.status_code == StatusCode.ValidationError
 
     def test_wrong_aggregaion_type(self, client):
         wrong_aggregation_type = "wrong"
 
-        response = client.get(f"/statistics/?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}&is_by_district={IS_BY_DISTRICT}&aggregation_type={wrong_aggregation_type}")
+        response = client.get(f"{V1_PREFIX}/download-statistics/?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}&is_by_district={IS_BY_DISTRICT}&aggregation_type={wrong_aggregation_type}")
         assert response.status_code == StatusCode.ValidationError
 
     def test_wrong_clumn_name(self, client):
         wrong_column_name = "wrong"
 
-        response = client.get(f"/statistics/?required_columns={wrong_column_name}&year={YEAR}")
+        response = client.get(f"{V1_PREFIX}/download-statistics/?required_columns={wrong_column_name}&year={YEAR}")
         assert response.status_code == StatusCode.ValidationError
