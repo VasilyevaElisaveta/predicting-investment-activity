@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select, and_, func
 
 import pandas as pd
-import tempfile
+from tempfile import TemporaryDirectory
+from pathlib import Path
 from os import getenv
 from dotenv import load_dotenv
 from enum import StrEnum
@@ -12,7 +13,9 @@ from enum import StrEnum
 from .DatabaseModels import Base, Statistics, Regions, Districts
 
 
-load_dotenv("...env")
+current_path = Path(".")
+env_file = current_path.resolve() / ".env"
+load_dotenv(env_file)
 
 
 class AggregationType(StrEnum):
@@ -45,29 +48,35 @@ class DataBase:
     __SYNC_PATH_BASE = "sqlite:///"
     __ASYNC_PATH_BASE = "postgresql+asyncpg://"
 
-    def __init__(self, is_sync: bool=True, reset: bool=False, detail: bool=False):
+    def __init__(self, is_sync: bool=True, detail: bool=False):
         self.__is_sync = is_sync
         if self.__is_sync:
-            self.__temp_db_dir = tempfile.TemporaryDirectory()
+            self.__temp_db_dir = TemporaryDirectory()
             self.__engine = create_engine(
                 DataBase.__SYNC_PATH_BASE + self.__temp_db_dir.name + "/temp.db",
                 echo=detail
             )
             self.__session = sessionmaker(self.__engine)
         else:
-            user = getenv("DB_USER", "<Database user>")
-            password = getenv("DB_PASSWORD", "<Database user password>")
-            host = getenv("DB_HOST", "<Database host>")
-            port = getenv("DB_PORT", "<Database port>")
-            name = getenv("DB_NAME", "Database name")
+            user = getenv("POSTGRES_USER", "<Postgres user>")
+            password = getenv("POSTGRES_PASSWORD", "<Postgres user password>")
+            host = getenv("POSTGRES_HOST", "<Postgres host>")
+            port = getenv("POSTGRES_PORT", "<Postgres port>")
+            db = getenv("POSTGRES_DB", "<Postgres db>")
             self.__engine = create_async_engine(
-                DataBase.__ASYNC_PATH_BASE + f"{user}:{password}@{host}:{port}/{name}"
+                DataBase.__ASYNC_PATH_BASE + f"{user}:{password}@{host}:{port}/{db}",
+                echo=detail
             )
             self.__session = async_sessionmaker(self.__engine)
 
-        if reset:
+    async def reset(self):
+        if self.__is_sync:
             Base.metadata.drop_all(self.__engine)
             Base.metadata.create_all(self.__engine)
+        else:
+            async with self.__engine.begin() as conn:
+                await conn.run_sync(Base.metadata.drop_all)
+                await conn.run_sync(Base.metadata.create_all)
 
     def close(self):
         self.__engine.dispose()
@@ -211,11 +220,9 @@ class DataBase:
         query = DataBase.__get_region_info_query(id, year)
         result = await self.__exec_query(query)
         try:
-            result = result.mappings().one()
+            return result.mappings().one()
         except:
-            result = None
-        
-        return result
+            return None
         
     @staticmethod
     def __get_district_info_query(id: int, year: int, aggregation_type: str):
@@ -227,18 +234,16 @@ class DataBase:
                 .select_from(Statistics)
                 .filter_by(district_id=id, year=year)
                 .join(Districts, Districts.id == Statistics.district_id)
-                .group_by(Statistics.district_id)
+                .group_by(Statistics.district_id, Districts.district_name)
             )
 
     async def get_district_info(self, id: int, year: int, aggregation_type: str) -> dict[str, str | int| float] | None:
         query = DataBase.__get_district_info_query(id, year, aggregation_type)
         result = await self.__exec_query(query)
         try:
-            result = result.mappings().one()
+            return result.mappings().one()
         except:
-            result = None
-        
-        return result
+            return None
         
     @staticmethod
     def __get_feature_info_query(feature: str, year: int, is_by_district: bool,
@@ -255,7 +260,7 @@ class DataBase:
                     Statistics.year,
                     arrg_orm_feature.label("feature_value")
                 )
-                .group_by(Statistics.district_id, Statistics.year)
+                .group_by(Statistics.district_id, Districts.district_name, Statistics.year)
                 .join(Districts, Districts.id == Statistics.district_id)
             )
         else:
@@ -345,7 +350,7 @@ class DataBase:
                 .select_from(Statistics) 
                 .join(Districts, Districts.id == Statistics.district_id)
                 .filter(Statistics.year == year)
-                .group_by(Statistics.district_id)
+                .group_by(Statistics.district_id, Districts.district_name)
             )
         else:
             columns = [getattr(Statistics, col) for col in required_columns]

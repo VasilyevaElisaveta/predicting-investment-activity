@@ -1,10 +1,11 @@
 import uvicorn
 from fastapi import FastAPI, Query, status, Request, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-import argparse
+from argparse import ArgumentParser
 from pathlib import Path
 from io import StringIO
 import pandas as pd
@@ -21,13 +22,16 @@ from .RequestModels import (
 )
 
 
+V1_PREFIX = "/api/v1"
+
+
 async def get_database(request: Request) -> DataBase:
     return request.app.state.db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    parser = argparse.ArgumentParser("Database configuration parser")
+    parser = ArgumentParser("Database configuration parser")
     parser.add_argument("--sync", action="store_true")
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--detail", action="store_true")
@@ -37,7 +41,10 @@ async def lifespan(app: FastAPI):
     if path is not None:
         reset = True
 
-    app.state.db = DataBase(is_sync=is_sync, reset=reset, detail=detail)
+    app.state.db = DataBase(is_sync=is_sync, detail=detail)
+
+    if reset:
+        await app.state.db.reset()
 
     if path is not None:
         file_path = Path(path)
@@ -54,10 +61,26 @@ async def lifespan(app: FastAPI):
     app.state.db.close()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url=V1_PREFIX + "/docs",
+    openapi_url=V1_PREFIX + "/openapi.json"
+)
+
+origins = [
+    "http://localhost:8000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
-@app.get('/region-info/',
+@app.get(V1_PREFIX + '/region-info/',
          description="Get overview statistics about the region by year",
          response_model=RegionResponse,
          status_code=status.HTTP_200_OK)
@@ -73,7 +96,7 @@ async def get_region_info(query_params: Annotated[RegionRequest, Query()], db: A
         )
     return region
 
-@app.get('/district-info/',
+@app.get(V1_PREFIX + '/district-info/',
          description="Get overview statistics about the district by year",
          response_model=DistrictResponse,
          status_code=status.HTTP_200_OK)
@@ -90,7 +113,7 @@ async def get_district_info(query_params: Annotated[DistrictRequest, Query()], d
         )
     return district
 
-@app.get('/feature-info/',
+@app.get(V1_PREFIX + '/feature-info/',
          description="Get information about a specific feature by regions or districts",
          response_model=FeatureResponse,
          status_code=status.HTTP_200_OK)
@@ -112,7 +135,7 @@ async def get_feature_info(query_params: Annotated[FeatureRequest, Query()], db:
     area_type = "district" if query_params.is_by_district else "region"
     return {"area_type": area_type, "features": features}
 
-@app.get('/statistics/',
+@app.get(V1_PREFIX + '/statistics/',
          description="Get overview statistics by regions or districts",
          response_model=StatisticsResponse,
          status_code=status.HTTP_200_OK)
@@ -137,7 +160,7 @@ async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db
 
     return {"area_type": area_type, "table": table}
 
-@app.get('/download-statistics/',
+@app.get(V1_PREFIX + '/download-statistics/',
          description="Download overview statistics by regions or districts",
          status_code=status.HTTP_200_OK)
 async def download_statistics(query_params: Annotated[StaticticsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
@@ -172,7 +195,7 @@ async def download_statistics(query_params: Annotated[StaticticsRequest, Query()
     )
 
 
-@app.get("/feature-graphs/",
+@app.get(V1_PREFIX + "/feature-graphs/",
          description="Get a graph of feature by year",
          response_model=FeatureGraphsResponse,
          status_code=status.HTTP_200_OK)
@@ -191,7 +214,7 @@ async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query
 
     return {"graphs": graphs}
 
-@app.get("/regions/",
+@app.get(V1_PREFIX + "/regions/",
          description="Get region names",
          response_model=AreasResponse,
          status_code=status.HTTP_200_OK)
@@ -204,7 +227,7 @@ async def get_region_names(db: Annotated[DataBase, Depends(get_database)]):
     
     return {"areas": areas}
 
-@app.get("/districts/",
+@app.get(V1_PREFIX + "/districts/",
          description="Get district names",
          response_model=AreasResponse,
          status_code=status.HTTP_200_OK)
@@ -219,4 +242,4 @@ async def get_district_names(db: Annotated[DataBase, Depends(get_database)]):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
