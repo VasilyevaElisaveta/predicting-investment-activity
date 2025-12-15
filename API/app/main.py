@@ -10,7 +10,7 @@ from pathlib import Path
 from io import StringIO
 import pandas as pd
 
-from .Database import DataBase
+from .DataBase import DataBase
 
 from .RequestModels import (
     RegionRequest, RegionResponse, 

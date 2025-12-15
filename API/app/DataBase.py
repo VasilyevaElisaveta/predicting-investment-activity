@@ -10,7 +10,7 @@ from os import getenv
 from dotenv import load_dotenv
 from enum import StrEnum
 
-from .DatabaseModels import Base, Statistics, Regions, Districts
+from .DataBaseModels import Base, Statistics, Regions, Districts
 
 
 current_path = Path(".")
