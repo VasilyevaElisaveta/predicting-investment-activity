@@ -1,0 +1,898 @@
+/* Основные стили приложения */
+.app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    width: 100%;
+    overflow-x: hidden;
+}
+
+.main {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+    padding: 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.sidebar {
+    width: 320px;
+    flex-shrink: 0;
+    min-width: 280px;
+}
+
+.content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Хэдер */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 25px;
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-left {
+    flex: 1;
+}
+
+.title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.subtitle {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.nav {
+    display: flex;
+    gap: 10px;
+    margin: 0 30px;
+}
+
+.nav button {
+    padding: 10px 20px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.nav button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.nav button.active {
+    background: white;
+    color: #1e3a8a;
+    font-weight: 600;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.year-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.control-label {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.year-select {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    background: white;
+    color: #1e3a8a;
+    font-weight: 500;
+    cursor: pointer;
+    min-width: 80px;
+}
+
+.api-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.api-status {
+    color: #10b981;
+    font-size: 16px;
+}
+
+/* Панель фильтров */
+.filters-panel {
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.filter-section {
+    margin-bottom: 20px;
+}
+
+.filter-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #374151;
+    font-size: 14px;
+}
+
+.select, .input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    background: white;
+}
+
+.select:focus, .input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.range-inputs {
+    display: flex;
+    gap: 10px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #4b5563;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #2563eb;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hint {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    margin: 25px 0 20px;
+}
+
+.btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.primary-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+}
+
+.primary-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-1px);
+}
+
+.secondary-btn {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.secondary-btn:hover:not(:disabled) {
+    background: #e5e7eb;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.filter-info {
+    background: #f0f9ff;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #3b82f6;
+    margin-top: 20px;
+}
+
+.filter-info p {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+}
+
+.filter-info ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13px;
+    color: #4b5563;
+}
+
+.filter-info li {
+    margin-bottom: 5px;
+}
+
+/* Индикаторы состояния */
+.loading-indicator,
+.error-message,
+.success-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.loading-indicator {
+    color: #3b82f6;
+    background: #eff6ff;
+}
+
+.error-message {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+.success-message {
+    color: #059669;
+    background: #d1fae5;
+}
+
+.small-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #d1d5db;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Панели загрузки и ошибок */
+.loading-panel,
+.error-panel,
+.empty-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 500px;
+    text-align: center;
+    padding: 20px;
+}
+
+.loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.error-icon,
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+/* Глобальный лоадер */
+.global-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loader-content {
+    text-align: center;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Стили для карты */
+.region-path {
+    transition: fill 300ms ease, stroke-width 150ms ease;
+    cursor: pointer;
+}
+
+.region-path:hover {
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));
+}
+
+/* Стили для панели данных */
+.data-panel {
+    width: 100%;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.06);
+    font-family: Arial, sans-serif;
+}
+
+.data-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.data-search {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.columns-select label {
+    margin-right: 8px;
+    font-size: 13px;
+}
+
+.export-buttons {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.export-buttons button {
+    padding: 8px 16px;
+    background-color: #007bff;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.export-buttons button:hover {
+    background-color: #0056b3;
+}
+
+/* Таблица */
+.table-container {
+    overflow-x: auto;
+    margin-top: 15px;
+    width: 100%;
+}
+
+.data-table {
+    width: 100%;
+    min-width: 800px;
+    border-collapse: collapse;
+    font-size: 14px;
+    table-layout: fixed;
+}
+
+.data-table th,
+.data-table td {
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    text-align: left;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.data-table th {
+    background-color: #f5f5f5;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    top: 0;
+    z-index: 1;
+}
+
+.data-table th:hover {
+    background-color: #ececec;
+}
+
+.data-table tr.even {
+    background-color: #fafafa;
+}
+
+.data-table tr.odd {
+    background-color: #fff;
+}
+
+.data-table tr:hover {
+    background-color: #f1faff;
+}
+
+.no-data {
+    padding: 20px;
+    text-align: center;
+    color: #888;
+    font-style: italic;
+}
+
+/* Пагинация */
+.pagination-container {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.pagination {
+    display: inline-flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pagination button {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    cursor: pointer;
+    border-radius: 4px;
+    min-width: 36px;
+}
+
+.pagination button.active {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Стили для StatsPage */
+.stats-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.key-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.metric-label {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.metric-unit {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.charts-grid,
+.additional-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.chart-card h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+    color: #1f2937;
+}
+
+.chart-container {
+    height: 300px;
+    position: relative;
+}
+
+/* Специальные стили */
+.modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 10000 !important;
+}
+
+.debug-info {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    z-index: 9999;
+    max-width: 300px;
+}
+
+/* Анимации */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНОВ */
+
+/* Планшеты и маленькие десктопы (768px - 1024px) */
+@media (max-width: 1024px) {
+    .main {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .sidebar {
+        width: 100%;
+        position: static;
+    }
+    
+    .content {
+        width: 100%;
+    }
+    
+    .charts-grid,
+    .additional-charts {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .chart-card {
+        min-width: 100%;
+    }
+    
+    .key-metrics {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Телефоны (480px - 767px) */
+@media (max-width: 767px) {
+    .topbar {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+        text-align: center;
+    }
+    
+    .nav {
+        margin: 0;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .nav button {
+        padding: 8px 15px;
+        font-size: 13px;
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .controls {
+        align-items: center;
+        width: 100%;
+    }
+    
+    .year-selector {
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
+    }
+    
+    .main {
+        padding: 10px;
+    }
+    
+    .filters-panel {
+        padding: 15px;
+        position: static;
+    }
+    
+    .range-inputs {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .filter-buttons {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+    
+    .data-panel {
+        padding: 15px;
+        margin: 10px auto;
+    }
+    
+    .data-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .data-search {
+        max-width: 100%;
+    }
+    
+    .export-buttons {
+        flex-direction: column;
+    }
+    
+    .data-table {
+        min-width: 100%;
+        font-size: 13px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 8px 10px;
+    }
+    
+    .key-metrics {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .metric-card {
+        padding: 16px;
+    }
+    
+    .metric-value {
+        font-size: 24px;
+    }
+    
+    .charts-grid,
+    .additional-charts {
+        gap: 15px;
+    }
+    
+    .chart-card {
+        padding: 15px;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+    
+    .pagination {
+        gap: 3px;
+    }
+    
+    .pagination button {
+        padding: 4px 8px;
+        min-width: 32px;
+        font-size: 13px;
+    }
+}
+
+/* Очень маленькие телефоны (до 479px) */
+@media (max-width: 479px) {
+    .title {
+        font-size: 18px;
+    }
+    
+    .subtitle {
+        font-size: 12px;
+    }
+    
+    .nav button {
+        padding: 6px 12px;
+        font-size: 12px;
+        min-width: 100px;
+    }
+    
+    .filter-label {
+        font-size: 13px;
+    }
+    
+    .select, .input {
+        padding: 8px;
+        font-size: 13px;
+    }
+    
+    .data-table {
+        font-size: 12px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 6px 8px;
+    }
+    
+    .metric-value {
+        font-size: 20px;
+    }
+    
+    .chart-container {
+        height: 200px;
+    }
+    
+    .export-buttons button {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+}
+
+/* Ландшафтная ориентация телефонов */
+@media (max-height: 500px) and (orientation: landscape) {
+    .topbar {
+        padding: 10px 15px;
+    }
+    
+    .nav {
+        margin: 0 15px;
+    }
+    
+    .main {
+        padding: 10px;
+    }
+    
+    .filters-panel {
+        position: static;
+    }
+    
+    .chart-container {
+        height: 200px;
+    }
+}
+
+/* Высокие экраны */
+@media (min-height: 800px) {
+    .main {
+        min-height: calc(100vh - 80px);
+    }
+}
+
+/* Поддержка темной темы (опционально) */
+@media (prefers-color-scheme: dark) {
+    .app {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    }
+    
+    .filters-panel,
+    .data-panel,
+    .metric-card,
+    .chart-card {
+        background: #2d2d2d;
+        border-color: #404040;
+        color: #e5e5e5;
+    }
+    
+    .filter-label,
+    .metric-value {
+        color: #e5e5e5;
+    }
+    
+    .hint,
+    .subtitle,
+    .metric-label,
+    .metric-unit {
+        color: #a0a0a0;
+    }
+    
+    .select, .input {
+        background: #404040;
+        border-color: #505050;
+        color: #e5e5e5;
+    }
+    
+    .data-table th {
+        background-color: #404040;
+        color: #e5e5e5;
+    }
+    
+    .data-table tr.even {
+        background-color: #363636;
+    }
+    
+    .data-table tr.odd {
+        background-color: #2d2d2d;
+    }
+}
