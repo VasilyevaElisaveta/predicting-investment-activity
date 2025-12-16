@@ -1,5 +1,6 @@
 volumes:
   db-storage:
+  static:
 
 services:
   db:
@@ -14,9 +15,17 @@ services:
     depends_on:
       - db
 
+  frontend:
+    build: ./frontend/
+    volumes:
+      - static:/frontend/dist
+
   gateaway:
     build: ./nginx/
     ports:
       - 80:80
     depends_on:
       - backend
+      - frontend
+    volumes:
+      - static:/staticfiles
