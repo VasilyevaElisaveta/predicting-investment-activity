@@ -1,0 +1,18 @@
+[project]
+name = "api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "fastapi[standard]>=0.123.9",
+    "pandas>=2.3.3",
+    "python-dotenv>=1.2.1",
+    "sqlalchemy>=2.0.44",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+]
