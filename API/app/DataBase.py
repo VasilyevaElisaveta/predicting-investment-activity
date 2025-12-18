@@ -409,3 +409,12 @@ class DataBase:
         query = DataBase.__get_areas_query(are_districts)
         result = await self.__exec_query(query)
         return result.mappings().all()
+    
+    @staticmethod
+    def __get_years_query():
+        return select(Statistics.year).distinct().order_by(Statistics.year.asc())
+    
+    async def get_years(self):
+        query = DataBase.__get_years_query()
+        result = await self.__exec_query(query)
+        return result.scalars().all()

@@ -18,7 +18,7 @@ from .RequestModels import (
     FeatureRequest, FeatureResponse,
     StaticticsRequest, StatisticsResponse,
     FeatureGraphsRequest, FeatureGraphsResponse,
-    AreasResponse
+    AreasResponse, YearsResponse
 )
 
 
@@ -223,7 +223,8 @@ async def get_region_names(db: Annotated[DataBase, Depends(get_database)]):
     if len(areas) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="There is no regions")
+            detail="There is no regions"
+        )
     
     return {"areas": areas}
 
@@ -236,9 +237,23 @@ async def get_district_names(db: Annotated[DataBase, Depends(get_database)]):
     if len(areas) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="There is no districts")
+            detail="There is no districts"
+        )
     
     return {"areas": areas}
+
+@app.get(V1_PREFIX + "/years/",
+         description="Get existing years",
+         response_model=YearsResponse,
+         status_code=status.HTTP_200_OK)
+async def get_years(db: Annotated[DataBase, Depends(get_database)]):
+    years = await db.get_years()
+    if len(years) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="There is no districts"
+        )
+    return {"years": years}
 
 
 if __name__ == "__main__":

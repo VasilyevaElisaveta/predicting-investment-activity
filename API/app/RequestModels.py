@@ -301,3 +301,8 @@ class AreaObject(BaseModel):
 class AreasResponse(BaseModel):
     
     areas: list[AreaObject]
+
+
+class YearsResponse(BaseModel):
+
+    years: list[int]
