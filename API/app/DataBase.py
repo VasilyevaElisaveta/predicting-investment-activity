@@ -392,6 +392,7 @@ class DataBase:
                 *aggr_columns
             )
             .group_by(Statistics.year)
+            .order_by(Statistics.year.asc())
         )
 
     async def get_feature_graphs(self, aggregation_type: str='avg') -> list[dict[str, int | float]]:
