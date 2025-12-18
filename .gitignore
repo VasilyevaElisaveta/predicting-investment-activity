@@ -1,0 +1,7 @@
+# database data
+data/*.csv
+.env
+
+# privat ssh keys
+keys
+keys.pub

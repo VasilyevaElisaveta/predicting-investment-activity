@@ -5,17 +5,10 @@ from sqlalchemy import select, and_, func
 
 import pandas as pd
 from tempfile import TemporaryDirectory
-from pathlib import Path
 from os import getenv
-from dotenv import load_dotenv
 from enum import StrEnum
 
 from .DataBaseModels import Base, Statistics, Regions, Districts
-
-
-current_path = Path(".")
-env_file = current_path.resolve() / ".env"
-load_dotenv(env_file)
 
 
 class AggregationType(StrEnum):
