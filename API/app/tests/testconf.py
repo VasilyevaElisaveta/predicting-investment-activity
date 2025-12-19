@@ -1,9 +1,11 @@
-import pytest
-from fastapi.testclient import TestClient
 from asyncio import run
 from enum import IntEnum
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.DataBase import DataBase
 from app.main import app, get_database
-from app.Database import DataBase
 
 
 class StatusCode(IntEnum):
@@ -33,7 +35,7 @@ def client(test_db):
 
     def override_get_db():
         return test_db
-    
+
     app.dependency_overrides[get_database] = override_get_db
 
     yield TestClient(app)

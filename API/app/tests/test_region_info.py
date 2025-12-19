@@ -1,7 +1,7 @@
-from .testconf import StatusCode, client, test_db
-from ..RequestModels import MIN_YEAR, MAX_YEAR, MIN_ID, RegionResponse
+from ..DataBase import MAX_YEAR, MIN_ID, MIN_YEAR
 from ..main import V1_PREFIX
-
+from ..RequestModels import RegionResponse
+from .testconf import StatusCode, client, test_db
 
 ID = 1
 YEAR = 2018
@@ -21,7 +21,7 @@ class TestSuccessfulCases:
 class TestFailureCases:
 
     def test_data_lack(self, client):
-        
+
         no_data_response = client.get(f"{V1_PREFIX}/region-info/")
         assert no_data_response.status_code == StatusCode.ValidationError
 
@@ -41,7 +41,7 @@ class TestFailureCases:
         too_big_year_response = client.get(f"{V1_PREFIX}/region-info/?id={ID}&year={too_big_year}")
         assert too_big_year_response.status_code == StatusCode.ValidationError
 
-    
+
     def test_wrong_id_value(self, client):
         too_little_id = MIN_ID - 1
         too_big_id = 99999

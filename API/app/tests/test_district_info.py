@@ -1,7 +1,7 @@
-from .testconf import StatusCode, client, test_db
-from ..RequestModels import MIN_YEAR, MAX_YEAR, MIN_ID, DistrictResponse
+from ..DataBase import MAX_YEAR, MIN_ID, MIN_YEAR
 from ..main import V1_PREFIX
-
+from ..RequestModels import DistrictResponse
+from .testconf import StatusCode, client, test_db
 
 ID = 1
 YEAR = 2018
@@ -22,7 +22,7 @@ class TestSuccessfulCases:
 class TestFailureCases:
 
     def test_data_lack(self, client):
-        
+
         no_data_response = client.get(f"{V1_PREFIX}/district-info/")
         assert no_data_response.status_code == StatusCode.ValidationError
 
@@ -39,27 +39,37 @@ class TestFailureCases:
         too_little_year = MIN_YEAR - 1
         too_big_year = MAX_YEAR + 1
 
-        too_little_year_response = client.get(f"{V1_PREFIX}/district-info/?id={ID}&year={too_little_year}&aggregation_type={AGGREGATION_TYPE}")
+        too_little_year_response = client.get(
+            f"{V1_PREFIX}/district-info/?id={ID}&year={too_little_year}&aggregation_type={AGGREGATION_TYPE}"
+        )
         assert too_little_year_response.status_code == StatusCode.ValidationError
 
-        too_big_year_response = client.get(f"{V1_PREFIX}/district-info/?id={ID}&year={too_big_year}&aggregation_type={AGGREGATION_TYPE}")
+        too_big_year_response = client.get(
+            f"{V1_PREFIX}/district-info/?id={ID}&year={too_big_year}&aggregation_type={AGGREGATION_TYPE}"
+        )
         assert too_big_year_response.status_code == StatusCode.ValidationError
 
-    
+
     def test_wrong_id_value(self, client):
         too_little_id = MIN_ID - 1
         too_big_id = 99999
         year = 2018
 
-        too_little_id_response = client.get(f"{V1_PREFIX}/district-info/?id={too_little_id}&year={year}&aggregation_type={AGGREGATION_TYPE}")
+        too_little_id_response = client.get(
+            f"{V1_PREFIX}/district-info/?id={too_little_id}&year={year}&aggregation_type={AGGREGATION_TYPE}"
+        )
         assert too_little_id_response.status_code == StatusCode.ValidationError
 
-        too_big_id_response = client.get(f"{V1_PREFIX}/district-info/?id={too_big_id}&year={year}&aggregation_type={AGGREGATION_TYPE}")
+        too_big_id_response = client.get(
+            f"{V1_PREFIX}/district-info/?id={too_big_id}&year={year}&aggregation_type={AGGREGATION_TYPE}"
+        )
         assert too_big_id_response.status_code == StatusCode.NotFound
         assert too_big_id_response.json()["detail"] == f"District for id={too_big_id} and year={year} not found"
 
     def test_wrong_aggregation_type(self, client):
         wrong_aggregation_type = "wrong"
 
-        response = client.get(f"{V1_PREFIX}/district-info/?id={ID}&year={YEAR}&aggregation_type={wrong_aggregation_type}")
+        response = client.get(
+            f"{V1_PREFIX}/district-info/?id={ID}&year={YEAR}&aggregation_type={wrong_aggregation_type}"
+        )
         assert response.status_code == StatusCode.ValidationError

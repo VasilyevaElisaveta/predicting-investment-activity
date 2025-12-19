@@ -1,7 +1,6 @@
-from .testconf import StatusCode, client, test_db
-from ..RequestModels import FeatureGraphsResponse
 from ..main import V1_PREFIX
-
+from ..RequestModels import FeatureGraphsResponse
+from .testconf import StatusCode, client, test_db
 
 AGGREGATION_TYPE = "min"
 
@@ -9,7 +8,7 @@ AGGREGATION_TYPE = "min"
 class TestSuccessCases:
 
     def test_get_feature_graphs(self, client):
-        
+
         response = client.get(f"{V1_PREFIX}/feature-graphs/?aggregation_type={AGGREGATION_TYPE}")
         assert response.status_code == StatusCode.Success
 

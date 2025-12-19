@@ -1,15 +1,15 @@
-from pydantic import BaseModel, Field, model_validator
-
-from .DataBase import AggregationType, ColumnName, AreaType
-
+from enum import StrEnum
 from typing import Self
 
+from pydantic import BaseModel, Field, model_validator
 
-MIN_YEAR = 2018
-MAX_YEAR = 2022
+from .DataBase import BORDER_YEAR, MAX_YEAR, MIN_FILTER_VALUE, MIN_ID, MIN_YEAR, AggregationType, AreaType, ColumnName
 
-MIN_ID = 1
-MIN_FILTER_VALUE = 0
+
+class FileExtension(StrEnum):
+
+    CSV = "csv"
+    XLSX = "xlsx"
 
 
 class RegionRequest(BaseModel):
@@ -46,20 +46,20 @@ class DistrictRequest(BaseModel):
 class DistrictResponse(BaseModel):
 
     investments: float
-    grp: float
-    population: int
-    unemployment: float
-    average_salary: float = Field(
+    grp: float | None
+    population: int | None
+    unemployment: float | None
+    average_salary: float | None = Field(
         title="Average salary"
     )
-    crimes: float
-    retail_turnover: float = Field(
+    crimes: float | None
+    retail_turnover: float | None = Field(
         title="Retail turnover"
     )
-    cash_expenses: float = Field(
+    cash_expenses: float | None = Field(
         title="Cash expenses"
     )
-    scientific_research: float = Field(
+    scientific_research: float | None = Field(
         title="Scientific research"
     )
     district_name: str = Field(
@@ -107,26 +107,36 @@ class FeatureRequest(BaseModel):
     def validate_aggregation(self) -> Self:
         if not self.is_by_district:
             return self
-        
+
         if self.aggregation_type is None:
             raise ValueError("Aggregation type is required, if you use selection by district.")
-        
+
         return self
-    
+
     @model_validator(mode="after")
     def validate_filtration(self) -> Self:
         if not self.use_filter:
             return self
-        
+
         if self.min_filter_value is None and self.max_filter_value is None:
             raise ValueError("At least one of filtration values is required, if you use filtration.")
-        
+
         if self.min_filter_value is not None and self.max_filter_value is not None:
             if self.max_filter_value <= self.min_filter_value:
                 raise ValueError("The max filter value must be greater than the min filter value.")
-            
+
         return self
-    
+
+    @model_validator(mode="after")
+    def validate_column(self) -> Self:
+        if self.year < BORDER_YEAR:
+            return self
+
+        if self.feature is not ColumnName.INVESTMENTS:
+            raise ValueError(f"There is only the investments feature for the {self.year} year.")
+
+        return self
+
 
 class FeatureObject(BaseModel):
 
@@ -155,7 +165,7 @@ class FeatureResponse(BaseModel):
 
 
 class StaticticsRequest(BaseModel):
-    
+
     model_config = {"extra": "forbid"}
 
     required_columns: list[ColumnName] = Field(
@@ -178,12 +188,25 @@ class StaticticsRequest(BaseModel):
     def validate_aggregation(self) -> Self:
         if not self.is_by_district:
             return self
-        
+
         if self.aggregation_type is None:
             raise ValueError("Aggregation type is required, if you use selection by district.")
-        
+
         return self
-    
+
+    @model_validator(mode="after")
+    def validate_columns(self) -> Self:
+        if self.year < BORDER_YEAR:
+            return self
+
+        if len(self.required_columns) != 1:
+            raise ValueError(f"There is only the investments column for the {self.year} year.")
+
+        if self.required_columns[0] is not ColumnName.INVESTMENTS:
+            raise ValueError(f"There is only the investments column for the {self.year} year.")
+
+        return self
+
 
 class DistrictsTable(BaseModel):
     investments: list[float] | None = Field(
@@ -235,11 +258,18 @@ class RegionsTable(DistrictsTable):
 
 
 class StatisticsResponse(BaseModel):
-    
+
     area_type: AreaType = Field(
         title="Area type"
     )
     table: RegionsTable | DistrictsTable
+
+
+class DownloadStatisticsRequest(StaticticsRequest):
+
+    file_extension: FileExtension = Field(
+        title="File Extension"
+    )
 
 
 class FeatureGraphsRequest(BaseModel):
@@ -259,34 +289,34 @@ class GraphObject(BaseModel):
     investments: list[float] = Field(
         title="Investments list"
     )
-    grp: list[float] = Field(
+    grp: list[float | None] = Field(
         title="GRP list"
     )
-    population: list[float] = Field(
+    population: list[float | None] = Field(
         title="Population list"
     )
-    unemployment: list[float] = Field(
+    unemployment: list[float | None] = Field(
         title="Unemployment list"
     )
-    average_salary: list[float] = Field(
+    average_salary: list[float | None] = Field(
         title="Average salary list"
     )
-    crimes: list[float] = Field(
+    crimes: list[float | None] = Field(
         title="Crimes list"
     )
-    retail_turnover: list[float] = Field(
+    retail_turnover: list[float | None] = Field(
         title="Retail turnover list"
     )
-    cash_expenses: list[float] = Field(
+    cash_expenses: list[float | None] = Field(
         title="Cash expenses list"
     )
-    scientific_research: list[float] = Field(
+    scientific_research: list[float | None] = Field(
         title="Scientific research list"
     )
 
 
 class FeatureGraphsResponse(BaseModel):
-    
+
     graphs: GraphObject
 
 
@@ -299,5 +329,26 @@ class AreaObject(BaseModel):
 
 
 class AreasResponse(BaseModel):
-    
+
     areas: list[AreaObject]
+
+
+class YearsResponse(BaseModel):
+
+    years: list[int]
+
+
+class AvailableColumnsRequest(BaseModel):
+
+    model_config = {"extra": "forbid"}
+
+    year: int = Field(
+        title="Year",
+        ge=MIN_YEAR,
+        le=MAX_YEAR
+    )
+
+
+class AvailableColumnsResponse(BaseModel):
+
+    columns_status: dict[ColumnName, bool]

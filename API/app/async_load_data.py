@@ -1,9 +1,8 @@
 from argparse import ArgumentParser
-from pathlib import Path
 from asyncio import run
+from pathlib import Path
 
 from .DataBase import DataBase
-
 
 parser = ArgumentParser("Database configuration parser")
 parser.add_argument("--reset", action="store_true")
@@ -17,15 +16,15 @@ async def main():
     file_path = Path(base_path) / file_name
     if not file_path.is_file():
         raise ValueError(f"{file_path} is either missing or not a file.")
-    
+
     if file_path.suffix != ".csv":
         raise ValueError("File extension is not '.csv'.")
-    
+
     db = DataBase(is_sync=False)
 
     if reset:
         await db.reset()
-    
+
     await db.load_data(file_path)
 
 if __name__ == "__main__":
