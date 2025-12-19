@@ -46,20 +46,20 @@ class DistrictRequest(BaseModel):
 class DistrictResponse(BaseModel):
 
     investments: float
-    grp: float
-    population: int
-    unemployment: float
-    average_salary: float = Field(
+    grp: float | None
+    population: int | None
+    unemployment: float | None
+    average_salary: float | None = Field(
         title="Average salary"
     )
-    crimes: float
-    retail_turnover: float = Field(
+    crimes: float | None
+    retail_turnover: float | None = Field(
         title="Retail turnover"
     )
-    cash_expenses: float = Field(
+    cash_expenses: float | None = Field(
         title="Cash expenses"
     )
-    scientific_research: float = Field(
+    scientific_research: float | None = Field(
         title="Scientific research"
     )
     district_name: str = Field(

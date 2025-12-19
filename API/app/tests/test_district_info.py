@@ -1,5 +1,6 @@
+from ..DataBase import MAX_YEAR, MIN_ID, MIN_YEAR
 from ..main import V1_PREFIX
-from ..RequestModels import MAX_YEAR, MIN_ID, MIN_YEAR, DistrictResponse
+from ..RequestModels import DistrictResponse
 from .testconf import StatusCode, client, test_db
 
 ID = 1

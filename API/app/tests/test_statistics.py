@@ -1,3 +1,4 @@
+from ..DataBase import BORDER_YEAR
 from ..main import V1_PREFIX
 from ..RequestModels import StatisticsResponse
 from .testconf import StatusCode, client, test_db
@@ -37,10 +38,17 @@ class TestSuccessCases:
 
         one_column_response = client.get(
             f"{V1_PREFIX}/statistics/" \
-                "?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}" \
-                "&is_by_district={IS_BY_DISTRICT}&aggregation_type={AGGREGATION_TYPE}"
+                f"?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}" \
+                f"&is_by_district={IS_BY_DISTRICT}&aggregation_type={AGGREGATION_TYPE}"
         )
         assert one_column_response.status_code == StatusCode.Success
+
+        one_column_response_by_border_year = client.get(
+            f"{V1_PREFIX}/statistics/" \
+                f"?required_columns={REQUIRED_COLUMNS[0]}&year={BORDER_YEAR}" \
+                f"&is_by_district={IS_BY_DISTRICT}&aggregation_type={AGGREGATION_TYPE}"
+        )
+        assert one_column_response_by_border_year.status_code == StatusCode.Success
 
         StatisticsResponse(**one_column_response.json())
 
@@ -69,7 +77,7 @@ class TestFailureCases:
 
         no_aggregation_type_response = client.get(
             f"{V1_PREFIX}/statistics/" \
-            "?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}&is_by_district={IS_BY_DISTRICT}"
+                f"?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}&is_by_district={IS_BY_DISTRICT}"
         )
         assert no_aggregation_type_response.status_code == StatusCode.ValidationError
 
@@ -78,8 +86,8 @@ class TestFailureCases:
 
         response = client.get(
             f"{V1_PREFIX}/statistics/" \
-            "?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}" \
-            "&is_by_district={IS_BY_DISTRICT}&aggregation_type={wrong_aggregation_type}"
+                f"?required_columns={REQUIRED_COLUMNS[0]}&year={YEAR}" \
+                f"&is_by_district={IS_BY_DISTRICT}&aggregation_type={wrong_aggregation_type}"
         )
         assert response.status_code == StatusCode.ValidationError
 
@@ -88,3 +96,16 @@ class TestFailureCases:
 
         response = client.get(f"{V1_PREFIX}/statistics/?required_columns={wrong_column_name}&year={YEAR}")
         assert response.status_code == StatusCode.ValidationError
+
+    def test_wrong_column_name_values_by_border_year(self, client):
+
+        several_columns_response = client.get(
+            f"{V1_PREFIX}/statistics/?" \
+                f"required_columns={REQUIRED_COLUMNS[0]}&required_columns={REQUIRED_COLUMNS[1]}&year={BORDER_YEAR}"
+            )
+        assert several_columns_response.status_code == StatusCode.ValidationError
+
+        wrong_column_name_response = client.get(
+            f"{V1_PREFIX}/statistics/?required_columns={REQUIRED_COLUMNS[-1]}&year={BORDER_YEAR}"
+            )
+        assert wrong_column_name_response.status_code == StatusCode.ValidationError

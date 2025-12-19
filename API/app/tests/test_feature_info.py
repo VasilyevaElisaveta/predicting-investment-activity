@@ -1,5 +1,6 @@
+from ..DataBase import BORDER_YEAR
+from ..DataBase import MIN_FILTER_VALUE as min_filter_value
 from ..main import V1_PREFIX
-from ..RequestModels import MIN_FILTER_VALUE as min_filter_value
 from ..RequestModels import FeatureResponse
 from .testconf import StatusCode, client, test_db
 
@@ -18,9 +19,9 @@ class TestSuccessCases:
 
         all_data_response = client.get(
             f"{V1_PREFIX}/feature-info/" \
-                "?feature={FEATURE}&year={YEAR}&is_by_district={IS_BY_DISTRICT}" \
-                "&aggregation_type={AGGREGATION_TYPE}&use_filter={USE_FILTER}" \
-                "&min_filter_value={MIN_FILTER_VALUE}&max_filter_value={MAX_FILTER_VALUE}"
+                f"?feature={FEATURE}&year={YEAR}&is_by_district={IS_BY_DISTRICT}" \
+                f"&aggregation_type={AGGREGATION_TYPE}&use_filter={USE_FILTER}" \
+                f"&min_filter_value={MIN_FILTER_VALUE}&max_filter_value={MAX_FILTER_VALUE}"
             )
         assert all_data_response.status_code == StatusCode.Success
 
@@ -30,7 +31,7 @@ class TestSuccessCases:
 
         no_filter_response = client.get(
             f"{V1_PREFIX}/feature-info/" \
-                "?feature={FEATURE}&year={YEAR}&is_by_district={IS_BY_DISTRICT}&aggregation_type={AGGREGATION_TYPE}"
+                f"?feature={FEATURE}&year={YEAR}&is_by_district={IS_BY_DISTRICT}&aggregation_type={AGGREGATION_TYPE}"
         )
         assert no_filter_response.status_code == StatusCode.Success
 
@@ -42,6 +43,13 @@ class TestSuccessCases:
         assert by_region_response.status_code == StatusCode.Success
 
         FeatureResponse(**by_region_response.json())
+
+    def test_get_data_by_border_year(self, client):
+
+        border_year_response = client.get(f"{V1_PREFIX}/feature-info/?feature={FEATURE}&year={BORDER_YEAR}")
+        assert border_year_response.status_code == StatusCode.Success
+
+        FeatureResponse(**border_year_response.json())
 
 
 class TestFailureCases:
@@ -67,6 +75,18 @@ class TestFailureCases:
         )
         assert no_filter_value_response.status_code == StatusCode.ValidationError
 
+    def test_wrong_feature(self, client):
+        wrong_feature = "wrong"
+        wrong_feature_by_border_year = "population"
+
+        wrong_feature_response = client.get(f"{V1_PREFIX}/feature-info/?feature={wrong_feature}&year={YEAR}")
+        assert wrong_feature_response.status_code == StatusCode.ValidationError
+
+        wrong_feature_by_border_year_response = client.get(
+            f"{V1_PREFIX}/feature-info/?feature={wrong_feature_by_border_year}&year={BORDER_YEAR}"
+        )
+        assert wrong_feature_by_border_year_response.status_code == StatusCode.ValidationError
+
     def test_wrong_aggregaion_type(self, client):
         wrong_aggregation_type = "wrong"
 
@@ -83,22 +103,22 @@ class TestFailureCases:
 
         wrong_max_value_response = client.get(
             f"{V1_PREFIX}/feature-info/" \
-                "?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}&max_filter_value={wrong_max_value}")
+                f"?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}&max_filter_value={wrong_max_value}")
         assert wrong_max_value_response.status_code == StatusCode.ValidationError
 
         wrong_min_value_response = client.get(
             f"{V1_PREFIX}/feature-info/" \
-                "?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}&min_filter_value={wrong_min_value}")
+                f"?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}&min_filter_value={wrong_min_value}")
         assert wrong_min_value_response.status_code == StatusCode.ValidationError
 
         equal_values_response = client.get(
             f"{V1_PREFIX}/feature-info/" \
-                "?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}" \
-                "&min_filter_value={MIN_FILTER_VALUE}&max_filter_value={MIN_FILTER_VALUE}")
+                f"?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}" \
+                f"&min_filter_value={MIN_FILTER_VALUE}&max_filter_value={MIN_FILTER_VALUE}")
         assert equal_values_response.status_code == StatusCode.ValidationError
 
         no_possible_data_response = client.get(
             f"{V1_PREFIX}/feature-info/" \
-                "?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}" \
-                "&min_filter_value={MIN_FILTER_VALUE}&max_filter_value={MIN_FILTER_VALUE + 1}")
+                f"?feature={FEATURE}&year={YEAR}&use_filter={USE_FILTER}" \
+                f"&min_filter_value={MIN_FILTER_VALUE}&max_filter_value={MIN_FILTER_VALUE + 1}")
         assert no_possible_data_response.status_code == StatusCode.NotFound
