@@ -15,14 +15,14 @@ class Statistics(Base):
     region_id: Mapped[int] = mapped_column(ForeignKey("regions.id", ondelete='CASCADE'))
     year: Mapped[int]
     investments: Mapped[float]
-    grp: Mapped[float]
-    population: Mapped[int]
-    unemployment: Mapped[float]
-    average_salary: Mapped[float]
-    crimes: Mapped[float]
-    retail_turnover: Mapped[float]
-    cash_expenses: Mapped[float]
-    scientific_research: Mapped[float]
+    grp: Mapped[float | None]
+    population: Mapped[int | None]
+    unemployment: Mapped[float | None]
+    average_salary: Mapped[float | None]
+    crimes: Mapped[float | None]
+    retail_turnover: Mapped[float | None]
+    cash_expenses: Mapped[float | None]
+    scientific_research: Mapped[float | None]
 
 
 class Regions(Base):

@@ -1,8 +1,15 @@
+from enum import StrEnum
 from typing import Self
 
 from pydantic import BaseModel, Field, model_validator
 
 from .DataBase import BORDER_YEAR, MAX_YEAR, MIN_FILTER_VALUE, MIN_ID, MIN_YEAR, AggregationType, AreaType, ColumnName
+
+
+class FileExtension(StrEnum):
+
+    CSV = "csv"
+    XLSX = "xlsx"
 
 
 class RegionRequest(BaseModel):
@@ -258,6 +265,13 @@ class StatisticsResponse(BaseModel):
     table: RegionsTable | DistrictsTable
 
 
+class DownloadStatisticsRequest(StaticticsRequest):
+
+    file_extension: FileExtension = Field(
+        title="File Extension"
+    )
+
+
 class FeatureGraphsRequest(BaseModel):
 
     model_config = {"extra": "forbid"}
@@ -275,28 +289,28 @@ class GraphObject(BaseModel):
     investments: list[float] = Field(
         title="Investments list"
     )
-    grp: list[float] = Field(
+    grp: list[float | None] = Field(
         title="GRP list"
     )
-    population: list[float] = Field(
+    population: list[float | None] = Field(
         title="Population list"
     )
-    unemployment: list[float] = Field(
+    unemployment: list[float | None] = Field(
         title="Unemployment list"
     )
-    average_salary: list[float] = Field(
+    average_salary: list[float | None] = Field(
         title="Average salary list"
     )
-    crimes: list[float] = Field(
+    crimes: list[float | None] = Field(
         title="Crimes list"
     )
-    retail_turnover: list[float] = Field(
+    retail_turnover: list[float | None] = Field(
         title="Retail turnover list"
     )
-    cash_expenses: list[float] = Field(
+    cash_expenses: list[float | None] = Field(
         title="Cash expenses list"
     )
-    scientific_research: list[float] = Field(
+    scientific_research: list[float | None] = Field(
         title="Scientific research list"
     )
 

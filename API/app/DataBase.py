@@ -207,10 +207,7 @@ class DataBase:
 
     @staticmethod
     def __get_region_info_query(id: int, year: int):
-        if year < BORDER_YEAR:
-            columns = [Statistics.investments]
-        else:
-            columns = [getattr(Statistics, col.value) for col in ColumnName]
+        columns = [getattr(Statistics, col.value) for col in ColumnName]
         return (
                 select(Regions.region_name, Districts.district_name, *columns)
                 .filter(Statistics.region_id == id, Statistics.year == year)

@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from contextlib import asynccontextmanager
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Annotated
 
@@ -18,10 +18,12 @@ from .RequestModels import (
     AvailableColumnsResponse,
     DistrictRequest,
     DistrictResponse,
+    DownloadStatisticsRequest,
     FeatureGraphsRequest,
     FeatureGraphsResponse,
     FeatureRequest,
     FeatureResponse,
+    FileExtension,
     RegionRequest,
     RegionResponse,
     StaticticsRequest,
@@ -174,7 +176,7 @@ async def get_statistics(query_params: Annotated[StaticticsRequest, Query()],
 @app.get(V1_PREFIX + '/download-statistics/',
          description="Download overview statistics by regions or districts",
          status_code=status.HTTP_200_OK)
-async def download_statistics(query_params: Annotated[StaticticsRequest, Query()],
+async def download_statistics(query_params: Annotated[DownloadStatisticsRequest, Query()],
                               db: Annotated[DataBase, Depends(get_database)]):
     data = await db.get_statistic(
         required_columns=query_params.required_columns,
@@ -193,16 +195,28 @@ async def download_statistics(query_params: Annotated[StaticticsRequest, Query()
         for key, value in elem.items():
             table[key].append(value)
 
-    buffer = StringIO()
     dataframe = pd.DataFrame(table)
-    dataframe.to_csv(buffer, index=False, encoding="utf-8-sig")
+
+    if query_params.file_extension is FileExtension.CSV:
+        buffer = StringIO()
+        dataframe.to_csv(buffer, index=False, encoding="utf-8-sig")
+        media_type = "text/csv"
+        file_name = "statistics.csv"
+    else:
+        buffer = BytesIO()
+        dataframe.to_excel(buffer, sheet_name="Regions", index=False)
+        media_type = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        file_name = "statistics.xlsx"
+
     buffer.seek(0)
 
     return StreamingResponse(
         buffer,
-        media_type="text/csv",
+        media_type=media_type,
         headers={
-            "Content-Disposition": 'attachment; filename="statistics.csv"'
+            "Content-Disposition": f'attachment; filename="{file_name}"'
         }
     )
 
