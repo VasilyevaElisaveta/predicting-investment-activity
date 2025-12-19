@@ -1,14 +1,20 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy import select, and_, func
+from enum import StrEnum
+from os import getenv
+from tempfile import TemporaryDirectory
 
 import pandas as pd
-from tempfile import TemporaryDirectory
-from os import getenv
-from enum import StrEnum
+from sqlalchemy import and_, create_engine, func, select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
-from .DataBaseModels import Base, Statistics, Regions, Districts
+from .DataBaseModels import Base, Districts, Regions, Statistics
+
+MIN_YEAR = 2014
+MAX_YEAR = 2026
+BORDER_YEAR = 2024
+
+MIN_ID = 1
+MIN_FILTER_VALUE = 0
 
 
 class AggregationType(StrEnum):
@@ -88,24 +94,24 @@ class DataBase:
             return func.max(orm_feature)
         else:
             return func.min(orm_feature)
-        
+
     def __exec_sync(self, query):
         with self.__session() as session:
             return session.execute(query)
-        
+
     async def __exec_async(self, query):
         async with self.__session() as session:
             return await session.execute(query)
-        
+
     async def __exec_query(self, query):
         if self.__is_sync:
             return self.__exec_sync(query)
-        return await self.__exec_async(query)     
-        
+        return await self.__exec_async(query)
+
     async def load_data(self, path: str):
         """
         Load data into the database from a CSV file with columns:
-        Округ, 
+        Округ,
         Регион,
         Год,
         Инвестиции,
@@ -117,7 +123,7 @@ class DataBase:
         Оборот_розницы,
         Денежные_доходы,
         Научные_исследования
-        
+
         Args:
             path (str): Path to CSV file
         """
@@ -147,7 +153,7 @@ class DataBase:
                     new_district_id += 1
 
                     district_instances.append(Districts(district_name=district))
-                
+
                 prev_district = district
                 prev_district_id = district_id
             else:
@@ -162,7 +168,7 @@ class DataBase:
                     new_region_id += 1
 
                     region_instances.append(Regions(region_name=region))
-                
+
                 prev_region = region
                 prev_region_id = region_id
             else:
@@ -201,27 +207,33 @@ class DataBase:
 
     @staticmethod
     def __get_region_info_query(id: int, year: int):
-        columns = [getattr(Statistics, col.value) for col in ColumnName]
+        if year < BORDER_YEAR:
+            columns = [Statistics.investments]
+        else:
+            columns = [getattr(Statistics, col.value) for col in ColumnName]
         return (
                 select(Regions.region_name, Districts.district_name, *columns)
-                .filter(Statistics.region_id==id, Statistics.year==year)
+                .filter(Statistics.region_id == id, Statistics.year == year)
                 .join(Regions, Regions.id == Statistics.region_id)
                 .join(Districts, Districts.id == Statistics.district_id)
             )
 
-    async def get_region_info(self, id: int, year: int) -> dict[str, str | int| float] | None:
+    async def get_region_info(self, id: int, year: int) -> dict[str, str | int | float] | None:
         query = DataBase.__get_region_info_query(id, year)
         result = await self.__exec_query(query)
         try:
             return result.mappings().one()
-        except:
+        except Exception:
             return None
-        
+
     @staticmethod
     def __get_district_info_query(id: int, year: int, aggregation_type: str):
         columns = [(col, getattr(Statistics, col.value)) for col in ColumnName]
-        aggr_columns = [DataBase.__aggregate_feature(orm_col, aggregation_type).label(col_name) for col_name, orm_col in columns]
-        
+        aggr_columns = [
+            DataBase.__aggregate_feature(orm_col, aggregation_type)
+            .label(col_name) for col_name, orm_col in columns
+        ]
+
         return (
                 select(Districts.district_name, *aggr_columns)
                 .select_from(Statistics)
@@ -235,9 +247,9 @@ class DataBase:
         result = await self.__exec_query(query)
         try:
             return result.mappings().one()
-        except:
+        except Exception:
             return None
-        
+
     @staticmethod
     def __get_feature_info_query(feature: str, year: int, is_by_district: bool,
                                  aggregation_type: str, use_filter: bool,
@@ -276,7 +288,7 @@ class DataBase:
                             arrg_orm_feature >= min_value
                         )
                     )
-                
+
                 if max_value is not None:
                     sub_query = (
                         sub_query
@@ -291,7 +303,7 @@ class DataBase:
                             orm_feature >= min_value
                         )
                     )
-                
+
                 if max_value is not None:
                     sub_query = sub_query.filter(
                         and_(
@@ -300,7 +312,10 @@ class DataBase:
                     )
         sub_query = sub_query.subquery()
 
-        prev_feature = func.lag(sub_query.c["feature_value"]).over(partition_by=sub_query.c.area_name, order_by=sub_query.c.year)
+        prev_feature = (
+            func.lag(sub_query.c["feature_value"])
+            .over(partition_by=sub_query.c.area_name, order_by=sub_query.c.year)
+        )
 
         windowed_sub_query = (
             select(
@@ -308,7 +323,7 @@ class DataBase:
                 (((sub_query.c["feature_value"] / prev_feature) - 1) * 100).label("feature_ratio")
                 ).subquery()
         )
-    
+
         return (
             select(windowed_sub_query.c["area_id", "area_name", "feature_value", "feature_ratio"])
             .filter_by(year=year)
@@ -325,22 +340,28 @@ class DataBase:
             min_value: int,
             max_value: int
         ) -> tuple[str, list[dict[str, str | float]]]:
-        query = DataBase.__get_feature_info_query(feature, year, is_by_district, aggregation_type, use_filter, min_value, max_value)
+        query = DataBase.__get_feature_info_query(
+            feature, year, is_by_district, aggregation_type, use_filter, min_value, max_value
+        )
         result = await self.__exec_query(query)
         return result.mappings().all()
-    
+
     @staticmethod
-    def __get_statistics_query(required_columns: list[str], year: int, is_by_district: bool=False, aggregation_type: str=None):
+    def __get_statistics_query(required_columns: list[str], year: int,
+                               is_by_district: bool=False, aggregation_type: str=None):
         if is_by_district:
             columns = [(col, getattr(Statistics, col)) for col in required_columns]
-            aggr_columns = [DataBase.__aggregate_feature(orm_col, aggregation_type).label(col_name) for col_name, orm_col in columns]
+            aggr_columns = [
+                DataBase.__aggregate_feature(orm_col, aggregation_type)
+                .label(col_name) for col_name, orm_col in columns
+            ]
 
             query = (
                 select(
                     Districts.district_name.label("district_names"),
                     *aggr_columns
                 )
-                .select_from(Statistics) 
+                .select_from(Statistics)
                 .join(Districts, Districts.id == Statistics.district_id)
                 .filter(Statistics.year == year)
                 .group_by(Statistics.district_id, Districts.district_name)
@@ -354,12 +375,12 @@ class DataBase:
                     Regions.region_name.label("region_names"),
                     *columns
                 )
-                .select_from(Statistics) 
+                .select_from(Statistics)
                 .join(Regions, Regions.id == Statistics.region_id)
                 .join(Districts, Districts.id == Statistics.district_id)
                 .filter(Statistics.year == year)
             )
-        
+
         return query
 
 
@@ -373,12 +394,15 @@ class DataBase:
         query = DataBase.__get_statistics_query(required_columns, year, is_by_district, aggregation_type)
         result = await self.__exec_query(query)
         return result.mappings().all()
-    
+
     @staticmethod
     def __get_feature_graphs_query(aggregation_type: str):
         columns = [(col, getattr(Statistics, col.value)) for col in ColumnName]
-        aggr_columns = [DataBase.__aggregate_feature(orm_col, aggregation_type).label(col_name) for col_name, orm_col in columns]
-            
+        aggr_columns = [
+            DataBase.__aggregate_feature(orm_col, aggregation_type)
+            .label(col_name) for col_name, orm_col in columns
+        ]
+
         return (
             select(
                 Statistics.year,
@@ -392,22 +416,22 @@ class DataBase:
         query = DataBase.__get_feature_graphs_query(aggregation_type)
         result = await self.__exec_query(query)
         return result.mappings().all()
-    
+
     @staticmethod
     def __get_areas_query(are_districts: bool):
         if are_districts:
             return select(Districts.id, Districts.district_name.label("area_name"))
         return select(Regions.id, Regions.region_name.label("area_name"))
-        
+
     async def get_areas(self, are_districts: bool=False) -> list[dict[str, int | str]]:
         query = DataBase.__get_areas_query(are_districts)
         result = await self.__exec_query(query)
         return result.mappings().all()
-    
+
     @staticmethod
     def __get_years_query():
         return select(Statistics.year).distinct().order_by(Statistics.year.asc())
-    
+
     async def get_years(self):
         query = DataBase.__get_years_query()
         result = await self.__exec_query(query)

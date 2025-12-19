@@ -1,16 +1,8 @@
-from pydantic import BaseModel, Field, model_validator
-
-from .DataBase import AggregationType, ColumnName, AreaType
-
 from typing import Self
 
+from pydantic import BaseModel, Field, model_validator
 
-MIN_YEAR = 2014
-MAX_YEAR = 2026
-BORDER_YEAR = 2024
-
-MIN_ID = 1
-MIN_FILTER_VALUE = 0
+from .DataBase import BORDER_YEAR, MAX_YEAR, MIN_FILTER_VALUE, MIN_ID, MIN_YEAR, AggregationType, AreaType, ColumnName
 
 
 class RegionRequest(BaseModel):
@@ -108,26 +100,36 @@ class FeatureRequest(BaseModel):
     def validate_aggregation(self) -> Self:
         if not self.is_by_district:
             return self
-        
+
         if self.aggregation_type is None:
             raise ValueError("Aggregation type is required, if you use selection by district.")
-        
+
         return self
-    
+
     @model_validator(mode="after")
     def validate_filtration(self) -> Self:
         if not self.use_filter:
             return self
-        
+
         if self.min_filter_value is None and self.max_filter_value is None:
             raise ValueError("At least one of filtration values is required, if you use filtration.")
-        
+
         if self.min_filter_value is not None and self.max_filter_value is not None:
             if self.max_filter_value <= self.min_filter_value:
                 raise ValueError("The max filter value must be greater than the min filter value.")
-            
+
         return self
-    
+
+    @model_validator(mode="after")
+    def validate_column(self) -> Self:
+        if self.year < BORDER_YEAR:
+            return self
+
+        if self.feature is not ColumnName.INVESTMENTS:
+            raise ValueError(f"There is only the investments feature for the {self.year} year.")
+
+        return self
+
 
 class FeatureObject(BaseModel):
 
@@ -156,7 +158,7 @@ class FeatureResponse(BaseModel):
 
 
 class StaticticsRequest(BaseModel):
-    
+
     model_config = {"extra": "forbid"}
 
     required_columns: list[ColumnName] = Field(
@@ -179,12 +181,25 @@ class StaticticsRequest(BaseModel):
     def validate_aggregation(self) -> Self:
         if not self.is_by_district:
             return self
-        
+
         if self.aggregation_type is None:
             raise ValueError("Aggregation type is required, if you use selection by district.")
-        
+
         return self
-    
+
+    @model_validator(mode="after")
+    def validate_columns(self) -> Self:
+        if self.year < BORDER_YEAR:
+            return self
+
+        if len(self.required_columns) != 1:
+            raise ValueError(f"There is only the investments column for the {self.year} year.")
+
+        if self.required_columns[0] is not ColumnName.INVESTMENTS:
+            raise ValueError(f"There is only the investments column for the {self.year} year.")
+
+        return self
+
 
 class DistrictsTable(BaseModel):
     investments: list[float] | None = Field(
@@ -236,7 +251,7 @@ class RegionsTable(DistrictsTable):
 
 
 class StatisticsResponse(BaseModel):
-    
+
     area_type: AreaType = Field(
         title="Area type"
     )
@@ -287,7 +302,7 @@ class GraphObject(BaseModel):
 
 
 class FeatureGraphsResponse(BaseModel):
-    
+
     graphs: GraphObject
 
 
@@ -300,7 +315,7 @@ class AreaObject(BaseModel):
 
 
 class AreasResponse(BaseModel):
-    
+
     areas: list[AreaObject]
 
 
@@ -311,6 +326,8 @@ class YearsResponse(BaseModel):
 
 class AvailableColumnsRequest(BaseModel):
 
+    model_config = {"extra": "forbid"}
+
     year: int = Field(
         title="Year",
         ge=MIN_YEAR,
@@ -319,5 +336,5 @@ class AvailableColumnsRequest(BaseModel):
 
 
 class AvailableColumnsResponse(BaseModel):
-    
+
     columns_status: dict[ColumnName, bool]

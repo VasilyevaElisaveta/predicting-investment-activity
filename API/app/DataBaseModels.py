@@ -1,5 +1,5 @@
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -26,7 +26,7 @@ class Statistics(Base):
 
 
 class Regions(Base):
-    
+
     __tablename__ = 'regions'
 
     id: Mapped[int] = mapped_column(primary_key=True)

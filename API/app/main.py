@@ -1,28 +1,33 @@
-import uvicorn
-from fastapi import FastAPI, Query, status, Request, Depends, HTTPException
-from fastapi.responses import StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
+from argparse import ArgumentParser
 from contextlib import asynccontextmanager
+from io import StringIO
+from pathlib import Path
 from typing import Annotated
 
-from argparse import ArgumentParser
-from pathlib import Path
-from io import StringIO
 import pandas as pd
+import uvicorn
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
-from .DataBase import DataBase, ColumnName
-
-from .RequestModels import BORDER_YEAR
+from .DataBase import ColumnName, DataBase
 from .RequestModels import (
-    RegionRequest, RegionResponse, 
-    DistrictRequest, DistrictResponse,
-    FeatureRequest, FeatureResponse,
-    StaticticsRequest, StatisticsResponse,
-    FeatureGraphsRequest, FeatureGraphsResponse,
-    AreasResponse, YearsResponse,
-    AvailableColumnsRequest, AvailableColumnsResponse
+    BORDER_YEAR,
+    AreasResponse,
+    AvailableColumnsRequest,
+    AvailableColumnsResponse,
+    DistrictRequest,
+    DistrictResponse,
+    FeatureGraphsRequest,
+    FeatureGraphsResponse,
+    FeatureRequest,
+    FeatureResponse,
+    RegionRequest,
+    RegionResponse,
+    StaticticsRequest,
+    StatisticsResponse,
+    YearsResponse,
 )
-
 
 V1_PREFIX = "/api/v1"
 
@@ -52,12 +57,12 @@ async def lifespan(app: FastAPI):
         file_path = Path(path)
         if not file_path.is_file():
             raise ValueError(f"{file_path} is either missing or not a file.")
-        
+
         if file_path.suffix != ".csv":
             raise ValueError("File extension is not '.csv'.")
-        
+
         await app.state.db.load_data(path)
-    
+
     yield
 
     app.state.db.close()
@@ -86,7 +91,8 @@ app.add_middleware(
          description="Get overview statistics about the region by year",
          response_model=RegionResponse,
          status_code=status.HTTP_200_OK)
-async def get_region_info(query_params: Annotated[RegionRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
+async def get_region_info(query_params: Annotated[RegionRequest, Query()],
+                          db: Annotated[DataBase, Depends(get_database)]):
     region = await db.get_region_info(
         id=query_params.id,
         year=query_params.year
@@ -102,7 +108,8 @@ async def get_region_info(query_params: Annotated[RegionRequest, Query()], db: A
          description="Get overview statistics about the district by year",
          response_model=DistrictResponse,
          status_code=status.HTTP_200_OK)
-async def get_district_info(query_params: Annotated[DistrictRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
+async def get_district_info(query_params: Annotated[DistrictRequest, Query()],
+                            db: Annotated[DataBase, Depends(get_database)]):
     district = await db.get_district_info(
         id=query_params.id,
         year=query_params.year,
@@ -119,7 +126,8 @@ async def get_district_info(query_params: Annotated[DistrictRequest, Query()], d
          description="Get information about a specific feature by regions or districts",
          response_model=FeatureResponse,
          status_code=status.HTTP_200_OK)
-async def get_feature_info(query_params: Annotated[FeatureRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
+async def get_feature_info(query_params: Annotated[FeatureRequest, Query()],
+                           db: Annotated[DataBase, Depends(get_database)]):
     features = await db.get_feature_info(
         feature=query_params.feature,
         year=query_params.year,
@@ -141,7 +149,8 @@ async def get_feature_info(query_params: Annotated[FeatureRequest, Query()], db:
          description="Get overview statistics by regions or districts",
          response_model=StatisticsResponse,
          status_code=status.HTTP_200_OK)
-async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
+async def get_statistics(query_params: Annotated[StaticticsRequest, Query()],
+                         db: Annotated[DataBase, Depends(get_database)]):
     data = await db.get_statistic(
         required_columns=query_params.required_columns,
         year=query_params.year,
@@ -153,7 +162,7 @@ async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db
             status_code=status.HTTP_404_NOT_FOUND,
             detail="There is no data"
         )
-    
+
     area_type = "district" if query_params.is_by_district else "region"
     table = {col_name: [] for col_name in data[0].keys()}
     for elem in data:
@@ -165,7 +174,8 @@ async def get_statistics(query_params: Annotated[StaticticsRequest, Query()], db
 @app.get(V1_PREFIX + '/download-statistics/',
          description="Download overview statistics by regions or districts",
          status_code=status.HTTP_200_OK)
-async def download_statistics(query_params: Annotated[StaticticsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
+async def download_statistics(query_params: Annotated[StaticticsRequest, Query()],
+                              db: Annotated[DataBase, Depends(get_database)]):
     data = await db.get_statistic(
         required_columns=query_params.required_columns,
         year=query_params.year,
@@ -177,7 +187,7 @@ async def download_statistics(query_params: Annotated[StaticticsRequest, Query()
             status_code=status.HTTP_404_NOT_FOUND,
             detail="There is no data"
         )
-    
+
     table = {col_name: [] for col_name in data[0].keys()}
     for elem in data:
         for key, value in elem.items():
@@ -201,14 +211,15 @@ async def download_statistics(query_params: Annotated[StaticticsRequest, Query()
          description="Get a graph of feature by year",
          response_model=FeatureGraphsResponse,
          status_code=status.HTTP_200_OK)
-async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query()], db: Annotated[DataBase, Depends(get_database)]):
+async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query()],
+                             db: Annotated[DataBase, Depends(get_database)]):
     data = await db.get_feature_graphs(aggregation_type=query_params.aggregation_type)
     if len(data) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="There is no data"
         )
-    
+
     graphs = {col_name: [] for col_name in data[0].keys()}
     for elem in data:
         for key, value in elem.items():
@@ -227,7 +238,7 @@ async def get_region_names(db: Annotated[DataBase, Depends(get_database)]):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="There is no regions"
         )
-    
+
     return {"areas": areas}
 
 @app.get(V1_PREFIX + "/districts/",
@@ -241,7 +252,7 @@ async def get_district_names(db: Annotated[DataBase, Depends(get_database)]):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="There is no districts"
         )
-    
+
     return {"areas": areas}
 
 @app.get(V1_PREFIX + "/years/",
@@ -273,7 +284,7 @@ async def get_available_columns(query: Annotated[AvailableColumnsRequest, Query(
             result[column.value] = True
         else:
             result[column.value] = False
-    
+
     return {"columns_status": result}
 
 

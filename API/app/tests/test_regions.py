@@ -1,6 +1,6 @@
-from .testconf import StatusCode, client, test_db
-from ..RequestModels import AreasResponse
 from ..main import V1_PREFIX
+from ..RequestModels import AreasResponse
+from .testconf import StatusCode, client, test_db
 
 
 class TestSuccessCases:
