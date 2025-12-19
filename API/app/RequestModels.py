@@ -5,8 +5,9 @@ from .DataBase import AggregationType, ColumnName, AreaType
 from typing import Self
 
 
-MIN_YEAR = 2018
-MAX_YEAR = 2022
+MIN_YEAR = 2014
+MAX_YEAR = 2026
+BORDER_YEAR = 2024
 
 MIN_ID = 1
 MIN_FILTER_VALUE = 0
@@ -306,3 +307,17 @@ class AreasResponse(BaseModel):
 class YearsResponse(BaseModel):
 
     years: list[int]
+
+
+class AvailableColumnsRequest(BaseModel):
+
+    year: int = Field(
+        title="Year",
+        ge=MIN_YEAR,
+        le=MAX_YEAR
+    )
+
+
+class AvailableColumnsResponse(BaseModel):
+    
+    columns_status: dict[ColumnName, bool]

@@ -10,15 +10,17 @@ from pathlib import Path
 from io import StringIO
 import pandas as pd
 
-from .DataBase import DataBase
+from .DataBase import DataBase, ColumnName
 
+from .RequestModels import BORDER_YEAR
 from .RequestModels import (
     RegionRequest, RegionResponse, 
     DistrictRequest, DistrictResponse,
     FeatureRequest, FeatureResponse,
     StaticticsRequest, StatisticsResponse,
     FeatureGraphsRequest, FeatureGraphsResponse,
-    AreasResponse, YearsResponse
+    AreasResponse, YearsResponse,
+    AvailableColumnsRequest, AvailableColumnsResponse
 )
 
 
@@ -254,6 +256,25 @@ async def get_years(db: Annotated[DataBase, Depends(get_database)]):
             detail="There is no districts"
         )
     return {"years": years}
+
+@app.get(V1_PREFIX + "/available-columns/",
+         description="Get available columns by year",
+         response_model=AvailableColumnsResponse,
+         status_code=status.HTTP_200_OK)
+async def get_available_columns(query: Annotated[AvailableColumnsRequest, Query()]):
+    year = query.year
+    result = {}
+    for column in ColumnName:
+        if column is ColumnName.INVESTMENTS:
+            result[column.value] = True
+            continue
+
+        if year < BORDER_YEAR:
+            result[column.value] = True
+        else:
+            result[column.value] = False
+    
+    return {"columns_status": result}
 
 
 if __name__ == "__main__":
