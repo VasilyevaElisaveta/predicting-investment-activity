@@ -1,3 +1,7 @@
+networks:
+  network:
+    driver: bridge
+
 volumes:
   db-storage:
   static:
@@ -5,27 +9,35 @@ volumes:
 services:
   db:
     image: postgres:16
+    restart: always
     env_file:
       - .env
     volumes:
       - db-storage:/var/lib/postgresql/data
+    networks:
+      - network
 
   backend:
     build: ./API/
+    restart: always
     env_file:
       - .env
     depends_on:
       - db
     volumes:
       - ./data:/API/app/data
+    networks:
+      - network
 
   frontend:
     build: ./frontend/
+    restart: no
     volumes:
       - static:/frontend/dist
 
   gateaway:
     build: ./nginx/
+    restart: always
     ports:
       - 80:80
     depends_on:
@@ -33,3 +45,5 @@ services:
       - frontend
     volumes:
       - static:/staticfiles
+    networks:
+      - network
