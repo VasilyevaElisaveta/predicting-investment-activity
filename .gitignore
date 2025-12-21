@@ -3,5 +3,7 @@ data/*.csv
 .env
 
 # privat ssh keys
+key
 keys
-keys.pub
+ssh-key
+*.pub

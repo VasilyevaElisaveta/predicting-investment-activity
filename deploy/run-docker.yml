@@ -1,0 +1,77 @@
+---
+- name: Deploy Docker Container with Docker Compose
+  hosts: vm
+  become: true
+
+  vars:
+    work_dir: "/home/{{ ansible_user }}/deploy"
+  
+  tasks:
+    - name: Fail if file_name is not set
+      ansible.builtin.fail:
+        msg: "You must provide file_name via -e file_name=..."
+      when: file_name is not defined
+
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create a deploy directory
+      ansible.builtin.file:
+        path: "{{ work_dir }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Create a data directory
+      ansible.builtin.file:
+        path: "{{ work_dir }}/data"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Copy docker-compose to remote host
+      ansible.builtin.copy:
+        src: ./docker-compose.deploy.yaml
+        dest: "{{ work_dir }}/docker-compose.yaml"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Copy .env file
+      ansible.builtin.copy:
+        src: ./.env
+        dest: "{{ work_dir }}/.env"
+        mode: '0600'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Copy database files
+      ansible.builtin.copy:
+        src: ./data/
+        dest: "{{ work_dir }}/data/"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Pull images
+      become: false
+      command: docker compose pull
+      args:
+        chdir: "{{ work_dir }}"
+
+    - name: Start docker compose
+      become: false
+      command: docker compose up -d
+      args:
+        chdir: "{{ work_dir }}"
+
+    - name: Run data load script inside backend container
+      become: false
+      command: "docker compose exec backend uv run -m app.async_load_data --reset --file-name {{ file_name }}"
+      args:
+        chdir: "{{ work_dir }}"

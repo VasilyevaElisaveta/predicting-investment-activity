@@ -1,0 +1,6 @@
+---
+docker:
+  hosts:
+    vm:
+      ansible_host: 
+      ansible_user: 
