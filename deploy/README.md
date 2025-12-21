@@ -65,10 +65,16 @@ Required columns:
 </tr>
 </table>
 
+3. Fill out the inventory.yml file:
+- ansible_host
+- ansible_user
+
+### Download Ansible
+- Update packages:<br><code>sudo apt update</code>
+- Install Ansible:<br><code>sudo apt install ansible</code>
+
 ### Run application
-- Start up:<br>  <code>docker-compose up -d</code>
-- Load data into the database:<br><code>docker-compose exec backend uv run -m app.async_load_data</code>
+- Download and install Docker:<br>  <code>ansible-playbook -i inventory.yml install-docker.yml</code>
+- Load data into the database:<br><code>ansible-playbook -i inventory.yml run-docker.yml</code>
 Command line arguments:
-	-  <code> --reset</code> -- reset database; automatically reset database when loading data (optional)
-	-  <code> --file-name</code> -- name of the file that data you want to load to database
-- Shut down:<br><code>docker-compose down</code>
+	- <code> -e file_name=\<your file name\></code> -- name of the file that data you want to load to database

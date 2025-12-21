@@ -2,6 +2,7 @@ from enum import StrEnum
 from os import getenv
 from tempfile import TemporaryDirectory
 
+import numpy as np
 import pandas as pd
 from sqlalchemy import and_, create_engine, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -128,6 +129,7 @@ class DataBase:
             path (str): Path to CSV file
         """
         df = pd.read_csv(path)
+        df.replace({np.nan: None}, inplace=True)
 
         statistic_instances = []
         region_instances = []

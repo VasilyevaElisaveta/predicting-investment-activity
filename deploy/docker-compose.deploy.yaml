@@ -18,7 +18,7 @@ services:
       - network
 
   backend:
-    build: ./API/
+    image: busyaska/investments-backend
     restart: always
     env_file:
       - .env
@@ -30,13 +30,13 @@ services:
       - network
 
   frontend:
-    build: ./frontend/
-    restart: no
+    image: busyaska/investments-frontend
+    restart: "no"
     volumes:
       - static:/frontend/dist
 
   gateaway:
-    build: ./nginx/
+    image: busyaska/investments-nginx
     restart: always
     ports:
       - 80:80
