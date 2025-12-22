@@ -65,10 +65,12 @@ Required columns:
 </tr>
 </table>
 
+3. Add a <code>.log</code> file to the <code>data/</code> folder. If you don't have one, the program will create it automatically.
+
 ### Run application
 - Start up:<br>  <code>docker-compose up -d</code>
 - Load data into the database:<br><code>docker-compose exec backend uv run -m app.async_load_data</code>
 Command line arguments:
-	-  <code> --reset</code> -- reset database; automatically reset database when loading data (optional)
-	-  <code> --file-name</code> -- name of the file that data you want to load to database
+	-  <code>--reset</code> <b>-</b> reset database; automatically reset database when loading data (optional)
+	-  <code>--file-name</code> <b>-</b> name of the file that data you want to load to database
 - Shut down:<br><code>docker-compose down</code>
