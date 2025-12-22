@@ -2,6 +2,9 @@
 data/*.csv
 .env
 
+# log data
+data/*.log
+
 # privat ssh keys
 key
 keys

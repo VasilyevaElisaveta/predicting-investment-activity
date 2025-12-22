@@ -69,6 +69,8 @@ Required columns:
 - ansible_host
 - ansible_user
 
+4. Add a <code>.log</code> file to the <code>data/</code> folder. If you don't have one, the program will create it automatically.
+
 ### Download Ansible
 - Update packages:<br><code>sudo apt update</code>
 - Install Ansible:<br><code>sudo apt install ansible</code>
@@ -77,4 +79,5 @@ Required columns:
 - Download and install Docker:<br>  <code>ansible-playbook -i inventory.yml install-docker.yml</code>
 - Load data into the database:<br><code>ansible-playbook -i inventory.yml run-docker.yml</code>
 Command line arguments:
-	- <code> -e file_name=\<your file name\></code> -- name of the file that data you want to load to database
+	- <code> -e file_name=\<your file name\></code> <b>-</b> name of the file that data you want to load to database
+- Configure ufw rules:<br>  <code>ansible-playbook -i inventory.yml configure-ufw.yml</code>

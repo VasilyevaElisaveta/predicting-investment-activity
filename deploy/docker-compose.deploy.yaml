@@ -18,7 +18,7 @@ services:
       - network
 
   backend:
-    image: busyaska/investments-backend
+    image: tealord/investments-backend
     restart: always
     env_file:
       - .env
@@ -30,13 +30,13 @@ services:
       - network
 
   frontend:
-    image: busyaska/investments-frontend
+    image: tealord/investments-frontend
     restart: "no"
     volumes:
       - static:/frontend/dist
 
   gateaway:
-    image: busyaska/investments-nginx
+    image: tealord/investments-nginx
     restart: always
     ports:
       - 80:80
