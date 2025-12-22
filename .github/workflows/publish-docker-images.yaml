@@ -1,0 +1,103 @@
+name: Publish Docker images
+
+on:
+  workflow_runs:
+    workflows: ["Test FastAPI app"]
+    types:
+      - completed
+
+jobs:
+  push_to_registry:
+
+    name: Push Docker images to Docker Hub
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v5
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+    
+      # Backend
+      - name: Extract metadata (tags, labels) for backend
+        id: backend_meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: tealord/investments-backend
+
+      - name: Build and push backend image
+        id: backend_push
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        with:
+          context: ./API/
+          file: ./API/Dockerfile
+          push: true
+          tags: ${{ steps.backend_meta.outputs.tags }}
+          labels: ${{ steps.backend_meta.outputs.labels }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: index.docker.io/tealord/investments-backend
+          subject-digest: ${{ steps.backend_push.outputs.digest }}
+          push-to-registry: true
+
+      # Frontend
+      - name: Extract metadata (tags, labels) for frontend
+        id: frontend_meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: tealord/investments-frontend
+
+      - name: Build and push frontend image
+        id: frontend_push
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        with:
+          context: ./frontend/
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.frontend_meta.outputs.tags }}
+          labels: ${{ steps.frontend_meta.outputs.labels }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: index.docker.io/tealord/investments-frontend
+          subject-digest: ${{ steps.frontend_push.outputs.digest }}
+          push-to-registry: true
+
+      # Nginx
+      - name: Extract metadata (tags, labels) for nginx
+        id: nginx_meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: tealord/investments-nginx
+
+      - name: Build and push nginx image
+        id: nginx_push
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        with:
+          context: ./nginx/
+          file: ./nginx/Dockerfile
+          push: true
+          tags: ${{ steps.nginx_meta.outputs.tags }}
+          labels: ${{ steps.nginx_meta.outputs.labels }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: index.docker.io/tealord/investments-nginx
+          subject-digest: ${{ steps.nginx_push.outputs.digest }}
+          push-to-registry: true
