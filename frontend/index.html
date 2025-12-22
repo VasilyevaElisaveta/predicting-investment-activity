@@ -1,26 +1,45 @@
 <!doctype html>
-<html>
+<html lang="ru" data-theme="light">
   <head>
     <link rel="icon" type="image/png" href="/R.png" />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-      <style>
-    /* Принудительная светлая тема */
-    html, body {
-      color-scheme: light !important;
-      background-color: white !important;
-      color: #333 !important;
-    }
-    
-    @media (prefers-color-scheme: dark) {
-      html, body {
+    <meta name="color-scheme" content="light">
+    <style>
+      /* Принудительная светлая тема для всего сайта */
+      :root {
+        color-scheme: light only;
+      }
+      
+      html {
         color-scheme: light !important;
         background-color: white !important;
         color: #333 !important;
       }
-    }
-  </style>
+      
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: white !important;
+        color: #333 !important;
+        min-height: 100vh;
+        font-family: 'Montserrat', sans-serif;
+      }
+      
+      /* Отключаем любые темные темы */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: light only;
+        }
+        
+        html, body {
+          color-scheme: light !important;
+          background-color: white !important;
+          color: #333 !important;
+        }
+      }
+    </style>
     <title>Инвестиционная карта России</title>
   </head>
   <body>
