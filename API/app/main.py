@@ -1,3 +1,4 @@
+import logging
 from argparse import ArgumentParser
 from contextlib import asynccontextmanager
 from io import BytesIO, StringIO
@@ -34,6 +35,15 @@ from .RequestModels import (
 V1_PREFIX = "/api/v1"
 
 
+def check_file(path: str, extension: str):
+    file_path = Path(path)
+    if not file_path.is_file():
+        raise ValueError(f"{file_path} is either missing or not a file.")
+
+    if file_path.suffix != extension:
+        raise ValueError(f"File extension is not {extension}.")
+
+
 async def get_database(request: Request) -> DataBase:
     return request.app.state.db
 
@@ -45,8 +55,9 @@ async def lifespan(app: FastAPI):
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--detail", action="store_true")
     parser.add_argument("--path", nargs="?")
+    parser.add_argument("--log-path", nargs="?", dest="log_path")
     args = parser.parse_args()
-    is_sync, reset, detail, path = args.sync, args.reset, args.detail, args.path
+    is_sync, reset, detail, path, log_path = args.sync, args.reset, args.detail, args.path, args.log_path
     if path is not None:
         reset = True
 
@@ -56,14 +67,28 @@ async def lifespan(app: FastAPI):
         await app.state.db.reset()
 
     if path is not None:
-        file_path = Path(path)
-        if not file_path.is_file():
-            raise ValueError(f"{file_path} is either missing or not a file.")
-
-        if file_path.suffix != ".csv":
-            raise ValueError("File extension is not '.csv'.")
-
+        check_file(path, ".csv")
         await app.state.db.load_data(path)
+
+    if log_path is not None:
+        check_file(log_path, ".log")
+        log_file_path = log_path
+    else:
+        data_folder = Path("app/data")
+        data_folder.mkdir(exist_ok=True)
+        log_files = list(data_folder.glob("*.log"))
+        if len(log_files) != 0:
+            log_file_path = log_files[0]
+        else:
+            log_file_path = "app/data/logs.log"
+
+    logging.basicConfig(
+        filename=log_file_path,
+        level=logging.INFO,
+        encoding="utf-8",
+        format="%(asctime)s %(message)s",
+        datefmt='%d/%m/%Y %H:%M:%S'
+    )
 
     yield
 
@@ -93,8 +118,10 @@ app.add_middleware(
          description="Get overview statistics about the region by year",
          response_model=RegionResponse,
          status_code=status.HTTP_200_OK)
-async def get_region_info(query_params: Annotated[RegionRequest, Query()],
+async def get_region_info(request: Request,
+                          query_params: Annotated[RegionRequest, Query()],
                           db: Annotated[DataBase, Depends(get_database)]):
+    logging.info(f"User {request.client.host} requested /region-info/")
     region = await db.get_region_info(
         id=query_params.id,
         year=query_params.year
@@ -110,8 +137,10 @@ async def get_region_info(query_params: Annotated[RegionRequest, Query()],
          description="Get overview statistics about the district by year",
          response_model=DistrictResponse,
          status_code=status.HTTP_200_OK)
-async def get_district_info(query_params: Annotated[DistrictRequest, Query()],
+async def get_district_info(request: Request,
+                            query_params: Annotated[DistrictRequest, Query()],
                             db: Annotated[DataBase, Depends(get_database)]):
+    logging.info(f"User {request.client.host} requested /district-info/")
     district = await db.get_district_info(
         id=query_params.id,
         year=query_params.year,
@@ -128,8 +157,10 @@ async def get_district_info(query_params: Annotated[DistrictRequest, Query()],
          description="Get information about a specific feature by regions or districts",
          response_model=FeatureResponse,
          status_code=status.HTTP_200_OK)
-async def get_feature_info(query_params: Annotated[FeatureRequest, Query()],
+async def get_feature_info(request: Request,
+                           query_params: Annotated[FeatureRequest, Query()],
                            db: Annotated[DataBase, Depends(get_database)]):
+    logging.info(f"User {request.client.host} requested /feature-info/")
     features = await db.get_feature_info(
         feature=query_params.feature,
         year=query_params.year,
@@ -151,8 +182,10 @@ async def get_feature_info(query_params: Annotated[FeatureRequest, Query()],
          description="Get overview statistics by regions or districts",
          response_model=StatisticsResponse,
          status_code=status.HTTP_200_OK)
-async def get_statistics(query_params: Annotated[StaticticsRequest, Query()],
+async def get_statistics(request: Request,
+                         query_params: Annotated[StaticticsRequest, Query()],
                          db: Annotated[DataBase, Depends(get_database)]):
+    logging.info(f"User {request.client.host} requested /statistics/")
     data = await db.get_statistic(
         required_columns=query_params.required_columns,
         year=query_params.year,
@@ -176,8 +209,10 @@ async def get_statistics(query_params: Annotated[StaticticsRequest, Query()],
 @app.get(V1_PREFIX + '/download-statistics/',
          description="Download overview statistics by regions or districts",
          status_code=status.HTTP_200_OK)
-async def download_statistics(query_params: Annotated[DownloadStatisticsRequest, Query()],
+async def download_statistics(request: Request,
+                              query_params: Annotated[DownloadStatisticsRequest, Query()],
                               db: Annotated[DataBase, Depends(get_database)]):
+    logging.info(f"User {request.client.host} requested /download-statistics/")
     data = await db.get_statistic(
         required_columns=query_params.required_columns,
         year=query_params.year,
@@ -225,8 +260,10 @@ async def download_statistics(query_params: Annotated[DownloadStatisticsRequest,
          description="Get a graph of feature by year",
          response_model=FeatureGraphsResponse,
          status_code=status.HTTP_200_OK)
-async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query()],
+async def get_feature_graphs(request: Request,
+                             query_params: Annotated[FeatureGraphsRequest, Query()],
                              db: Annotated[DataBase, Depends(get_database)]):
+    logging.info(f"User {request.client.host} requested /feature-graphs/")
     data = await db.get_feature_graphs(aggregation_type=query_params.aggregation_type)
     if len(data) == 0:
         raise HTTPException(
@@ -245,7 +282,8 @@ async def get_feature_graphs(query_params: Annotated[FeatureGraphsRequest, Query
          description="Get region names",
          response_model=AreasResponse,
          status_code=status.HTTP_200_OK)
-async def get_region_names(db: Annotated[DataBase, Depends(get_database)]):
+async def get_region_names(request: Request, db: Annotated[DataBase, Depends(get_database)]):
+    logging.info(f"User {request.client.host} requested /regions/")
     areas = await db.get_areas()
     if len(areas) == 0:
         raise HTTPException(
@@ -259,7 +297,8 @@ async def get_region_names(db: Annotated[DataBase, Depends(get_database)]):
          description="Get district names",
          response_model=AreasResponse,
          status_code=status.HTTP_200_OK)
-async def get_district_names(db: Annotated[DataBase, Depends(get_database)]):
+async def get_district_names(request: Request, db: Annotated[DataBase, Depends(get_database)]):
+    logging.info(f"User {request.client.host} requested /districts/")
     areas = await db.get_areas(are_districts=True)
     if len(areas) == 0:
         raise HTTPException(
@@ -273,7 +312,8 @@ async def get_district_names(db: Annotated[DataBase, Depends(get_database)]):
          description="Get existing years",
          response_model=YearsResponse,
          status_code=status.HTTP_200_OK)
-async def get_years(db: Annotated[DataBase, Depends(get_database)]):
+async def get_years(request: Request, db: Annotated[DataBase, Depends(get_database)]):
+    logging.info(f"User {request.client.host} requested /years/")
     years = await db.get_years()
     if len(years) == 0:
         raise HTTPException(
@@ -286,7 +326,8 @@ async def get_years(db: Annotated[DataBase, Depends(get_database)]):
          description="Get available columns by year",
          response_model=AvailableColumnsResponse,
          status_code=status.HTTP_200_OK)
-async def get_available_columns(query: Annotated[AvailableColumnsRequest, Query()]):
+async def get_available_columns(request: Request, query: Annotated[AvailableColumnsRequest, Query()]):
+    logging.info(f"User {request.client.host} requested /available-columns/")
     year = query.year
     result = {}
     for column in ColumnName:
