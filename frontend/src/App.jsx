@@ -6,14 +6,15 @@ import RegionModal from './components/RegionModal'
 import InstructionModal from './components/InstructionModal'
 import DataPage from './pages/DataPage'
 import StatsPage from './pages/StatsPage'
-import { YEARS } from './config'
+import { fetchAvailableYears, MAP_CONFIG } from './config'
 import { getAreas, getRegionInfo, getDistrictInfo  } from './api/api'
 import './styles.css'
 
 export default function App() {
     // Состояния
     const [activeTab, setActiveTab] = useState('map')
-    const [year, setYear] = useState(2022)
+    const [years, setYears] = useState([]) 
+    const [year, setYear] = useState(MAP_CONFIG.defaultYear)
     const [feature, setFeature] = useState('investments')
     const [isByDistrict, setIsByDistrict] = useState(false)
     const [minVal, setMinVal] = useState('')
@@ -25,8 +26,44 @@ export default function App() {
     const [selectedRegion, setSelectedRegion] = useState(null)
     const [showInstr, setShowInstr] = useState(false)
     const [loadingAreas, setLoadingAreas] = useState(true)
+    const [loadingYears, setLoadingYears] = useState(true) 
+    const [yearsError, setYearsError] = useState(null)
     const [areasError, setAreasError] = useState(null)
     const [filtersApplied, setFiltersApplied] = useState(false)
+
+    useEffect(() => {
+        const loadYears = async () => {
+            setLoadingYears(true)
+            setYearsError(null)
+            try {
+                console.log('Загрузка доступных годов из API...')
+                const availableYears = await fetchAvailableYears()
+                console.log('Доступные годы:', availableYears)
+                
+                if (availableYears && availableYears.length > 0) {
+                    const sortedYears = [...availableYears].sort((a, b) => b - a)
+                    setYears(sortedYears)
+                    
+                    const maxAvailableYear = Math.max(...availableYears)
+                    if (year !== maxAvailableYear) {
+                        setYear(maxAvailableYear)
+                        MAP_CONFIG.defaultYear = maxAvailableYear 
+                    }
+                } else {
+                    throw new Error('Нет доступных годов')
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки годов:', error)
+                setYearsError(`Ошибка загрузки годов: ${error.message}`)
+                const fallbackYears = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+                setYears(fallbackYears)
+            } finally {
+                setLoadingYears(false)
+            }
+        }
+
+        loadYears()
+    }, [])
 
     // Загрузка списка регионов/округов
     useEffect(() => {
@@ -85,13 +122,17 @@ export default function App() {
         setShowNeg(true)
         setShowStable(true)
         setFiltersApplied(!filtersApplied) 
-        console.log(' Фильтры сброшены')
+        console.log('Фильтры сброшены')
     }
 
     // Обработчик изменения года
     const handleYearChange = (newYear) => {
-        const validYear = Math.min(Math.max(newYear, YEARS[0]), YEARS[YEARS.length - 1])
-        setYear(validYear)
+        if (years.length > 0) {
+            const minYear = Math.min(...years)
+            const maxYear = Math.max(...years)
+            const validYear = Math.min(Math.max(newYear, minYear), maxYear)
+            setYear(validYear)
+        }
     }
 
     // Обработчик переключения вкладок
@@ -102,7 +143,6 @@ export default function App() {
         }
     }
 
-
     const handleRegionSelect = async (regionData) => {
         console.log('ВЫБОР РЕГИОНА')
         console.log('Данные из MapView:', regionData)
@@ -112,14 +152,14 @@ export default function App() {
             console.log('Уже есть полные данные округа')
             setSelectedRegion({
                 ...regionData,
-                is_base_year: year === 2018,
+                is_base_year: year === Math.min(...years),
                 year: year
             });
             return;
         }
         
-        if (year === 2018) {
-            console.log('2018 год - динамика не рассчитывается')
+        if (year === Math.min(...years)) {
+            console.log(`${year} год - базовый год, динамика не рассчитывается`)
         }
         
         // Если есть ID региона, пробуем получить полные данные из API
@@ -182,7 +222,7 @@ export default function App() {
                                 fullRegionData?.district_name ||
                                 regionData.region_name || 
                                 regionData.area_name,
-                    is_base_year: year === 2018,
+                    is_base_year: year === Math.min(...years),
                     year: year,
                     isDistrict: regionData.isDistrict || false
                 };
@@ -195,7 +235,7 @@ export default function App() {
                 console.log('Используем данные из MapView')
                 setSelectedRegion({
                     ...regionData,
-                    is_base_year: year === 2018,
+                    is_base_year: year === Math.min(...years),
                     year: year,
                     isDistrict: regionData.isDistrict || false
                 })
@@ -204,12 +244,13 @@ export default function App() {
             console.log('Нет ID региона, используем данные из MapView')
             setSelectedRegion({
                 ...regionData,
-                is_base_year: year === 2018,
+                is_base_year: year === Math.min(...years),
                 year: year,
                 isDistrict: regionData.isDistrict || false
             })
         }
     }
+
     const handleCloseRegionModal = () => {
         console.log('Закрытие модального окна региона')
         setSelectedRegion(null)
@@ -223,9 +264,10 @@ export default function App() {
 
     // Дебаг информация
     console.log('СОСТОЯНИЕ')
+    console.log('Доступные годы:', years)
+    console.log('Текущий год:', year)
     console.log('Выбран регион:', !!selectedRegion)
     console.log('Активная вкладка:', activeTab)
-    console.log('Текущий год:', year)
     console.log('Показатель:', feature)
     console.log('По округам:', isByDistrict)
     console.log('Количество регионов:', areas.length)
@@ -238,7 +280,9 @@ export default function App() {
             <Header
                 year={year}
                 setYear={handleYearChange}
-                years={YEARS}
+                years={years}
+                loadingYears={loadingYears}
+                yearsError={yearsError}
                 onNav={handleTabChange}
                 currentTab={activeTab}
             />
@@ -271,11 +315,12 @@ export default function App() {
                         </aside>
 
                         <main className="content">
-                            {loadingAreas ? (
+                            {loadingAreas || loadingYears ? (
                                 <div className="panel loading-panel">
                                     <div className="loader">
                                         <div className="spinner"></div>
                                         <div>Загрузка карты...</div>
+                                        {loadingYears && <div style={{ fontSize: '14px', marginTop: '10px' }}>Загрузка доступных годов</div>}
                                     </div>
                                 </div>
                             ) : areasError ? (
@@ -323,7 +368,6 @@ export default function App() {
                 />
                 )}
 
-
                 {activeTab === 'stats' && (
                     <StatsPage
                         year={year}
@@ -352,7 +396,6 @@ export default function App() {
                     onClose={handleCloseInstrModal}
                 />
             )}
-
         </div>
     );
 }

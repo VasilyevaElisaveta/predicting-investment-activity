@@ -7,13 +7,12 @@ export default function StatsPage() {
     const [error, setError] = useState('')
     const [aggregationType, setAggregationType] = useState('avg') 
     const [activeChart, setActiveChart] = useState('investments')
-    const [showTable, setShowTable] = useState(false) 
     const containerRef = useRef(null)
 
-    //4 типа агрегации
+    // 4 типа агрегации
     const aggregationOptions = [
         { value: 'avg', label: 'Среднее', color: '#8b5cf6' },
-        { value: 'min', label: 'Минимум', color: '#3b82f6' },
+        { value: 'min', label: 'Минимум', color: '#3b82f6'},
         { value: 'max', label: 'Максимум', color: '#ef4444'},
         { value: 'sum', label: 'Сумма', color: '#10b981' }
     ]
@@ -46,7 +45,23 @@ export default function StatsPage() {
             
             if (response && response.graphs && response.graphs.year && response.graphs.year.length > 0) {
                 console.log('Data loaded successfully')
-                setData(response.graphs)
+                
+                // Проверяем доступные данные
+                const availableCharts = chartOptions.map(option => {
+                    const values = response.graphs[option.id]
+                    const hasData = values && values.some(v => v !== null && v !== undefined && !isNaN(v))
+                    return {
+                        ...option,
+                        hasData
+                    }
+                })
+                
+                console.log('Available charts:', availableCharts)
+                
+                setData({
+                    ...response.graphs,
+                    availableCharts // Добавляем информацию о доступности
+                })
             } else {
                 console.error('Invalid response structure:', response)
                 throw new Error('Некорректный формат данных от сервера')
@@ -73,15 +88,45 @@ export default function StatsPage() {
         }).format(num)
     }
 
-    const formatFullNumber = (num) => {
-        if (num === null || num === undefined || isNaN(num)) return '—'
+    const getAvailableYears = () => {
+        if (!data || !data.year) return []
+        return data.year.filter(year => year !== null && year !== undefined)
+    }
+
+    const getLastAvailableValue = (chartId) => {
+        if (!data || !data[chartId]) return null
         
-        const chartOption = chartOptions.find(opt => opt.id === activeChart)
+        const values = data[chartId]
+        // Ищем последнее не-null значение с конца
+        for (let i = values.length - 1; i >= 0; i--) {
+            if (values[i] !== null && values[i] !== undefined && !isNaN(values[i])) {
+                return values[i]
+            }
+        }
+        return null
+    }
+
+    const getFirstAvailableValue = (chartId) => {
+        if (!data || !data[chartId]) return null
         
-        return new Intl.NumberFormat('ru-RU', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2
-        }).format(num)
+        const values = data[chartId]
+        // Ищем первое не-null значение
+        for (let i = 0; i < values.length; i++) {
+            if (values[i] !== null && values[i] !== undefined && !isNaN(values[i])) {
+                return values[i]
+            }
+        }
+        return null
+    }
+
+    const calculateGrowth = (chartId) => {
+        const lastValue = getLastAvailableValue(chartId)
+        const firstValue = getFirstAvailableValue(chartId)
+        
+        if (firstValue && lastValue && firstValue !== 0 && !isNaN(firstValue) && !isNaN(lastValue)) {
+            return ((lastValue - firstValue) / firstValue) * 100
+        }
+        return null
     }
 
     const renderSVGChart = () => {
@@ -105,7 +150,7 @@ export default function StatsPage() {
             )
         }
         
-        const years = data.year
+        const years = getAvailableYears()
         const values = data[activeChart]
         const chartOption = chartOptions.find(opt => opt.id === activeChart)
         
@@ -125,7 +170,7 @@ export default function StatsPage() {
             )
         }
         
-        // Находим мин и макс для масштабирования
+        // Находим мин и макс для масштабирования (только не-null значения)
         const filteredValues = values.filter(v => v != null && !isNaN(v))
         if (filteredValues.length === 0) {
             return (
@@ -275,185 +320,6 @@ export default function StatsPage() {
         )
     }
 
-    const renderStatisticsTable = () => {
-        if (!data || !data.year) return null
-        
-        const years = data.year
-        
-        return (
-            <div style={{ 
-                background: 'white',
-                borderRadius: 12,
-                padding: 25,
-                marginBottom: 30,
-                boxShadow: '0 2px 15px rgba(0,0,0,0.1)',
-                overflowX: 'auto'
-            }}>
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 20
-                }}>
-                    <h3 style={{ margin: 0, color: '#1f2937' }}>
-                        Статистика по всем показателям ({aggregationOptions.find(a => a.value === aggregationType)?.label})
-                    </h3>
-                    <button
-                        onClick={() => setShowTable(!showTable)}
-                        style={{
-                            padding: '8px 16px',
-                            background: showTable ? '#ef4444' : '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            fontSize: 14
-                        }}
-                    >
-                        {showTable ? 'Скрыть таблицу' : 'Показать таблицу'}
-                    </button>
-                </div>
-                
-                {showTable && (
-                    <table style={{ 
-                        width: '100%',
-                        borderCollapse: 'collapse',
-                        fontSize: 14
-                    }}>
-                        <thead>
-                            <tr style={{ 
-                                background: '#f8fafc',
-                                borderBottom: '2px solid #e5e7eb'
-                            }}>
-                                <th style={{ 
-                                    padding: '12px 16px',
-                                    textAlign: 'left',
-                                    fontWeight: 'bold',
-                                    color: '#374151',
-                                    position: 'sticky',
-                                    left: 0,
-                                    background: '#f8fafc',
-                                    minWidth: '200px'
-                                }}>
-                                    Показатель
-                                </th>
-                                {years.map(year => (
-                                    <th key={year} style={{ 
-                                        padding: '12px 16px',
-                                        textAlign: 'center',
-                                        fontWeight: 'bold',
-                                        color: '#374151',
-                                        borderLeft: '1px solid #e5e7eb',
-                                        minWidth: '120px'
-                                    }}>
-                                        {year}
-                                    </th>
-                                ))}
-                                <th style={{ 
-                                    padding: '12px 16px',
-                                    textAlign: 'center',
-                                    fontWeight: 'bold',
-                                    color: '#374151',
-                                    borderLeft: '1px solid #e5e7eb',
-                                    minWidth: '120px'
-                                }}>
-                                    Изменение
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {chartOptions.map((option, rowIndex) => {
-                                const values = data[option.id] || []
-                                const firstValue = values[0]
-                                const lastValue = values[values.length - 1]
-                                const growth = firstValue && lastValue ? 
-                                    ((lastValue - firstValue) / firstValue * 100) : null
-                                
-                                return (
-                                    <tr key={option.id} style={{ 
-                                        borderBottom: '1px solid #e5e7eb',
-                                        background: rowIndex % 2 === 0 ? 'white' : '#f9fafb'
-                                    }}>
-                                        <td style={{ 
-                                            padding: '12px 16px',
-                                            fontWeight: '500',
-                                            color: '#1f2937',
-                                            position: 'sticky',
-                                            left: 0,
-                                            background: rowIndex % 2 === 0 ? 'white' : '#f9fafb',
-                                            borderRight: '1px solid #e5e7eb'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <div style={{ 
-                                                    width: 12, 
-                                                    height: 12, 
-                                                    background: option.color,
-                                                    borderRadius: '50%'
-                                                }}></div>
-                                                {option.label}
-                                            </div>
-                                            <div style={{ 
-                                                fontSize: 12, 
-                                                color: '#6b7280',
-                                                marginTop: 4
-                                            }}>
-                                                {option.unit}
-                                            </div>
-                                        </td>
-                                        {years.map((year, colIndex) => {
-                                            const value = values[colIndex]
-                                            return (
-                                                <td key={`${option.id}-${year}`} style={{ 
-                                                    padding: '12px 16px',
-                                                    textAlign: 'right',
-                                                    fontFamily: 'monospace',
-                                                    borderLeft: '1px solid #e5e7eb'
-                                                }}>
-                                                    {value != null ? formatNumber(value, option.id) : '—'}
-                                                </td>
-                                            )
-                                        })}
-                                        <td style={{ 
-                                            padding: '12px 16px',
-                                            textAlign: 'center',
-                                            borderLeft: '1px solid #e5e7eb',
-                                            fontWeight: 'bold',
-                                            color: growth >= 0 ? '#10b981' : '#ef4444'
-                                        }}>
-                                            {growth != null ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                                                    <span>{growth >= 0 ? '↗' : '↘'}</span>
-                                                    <span>{Math.abs(growth).toFixed(1)}%</span>
-                                                </div>
-                                            ) : '—'}
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                        <tfoot>
-                            <tr style={{ 
-                                background: '#f0f9ff',
-                                borderTop: '2px solid #e5e7eb'
-                            }}>
-                                <td style={{ 
-                                    padding: '12px 16px',
-                                    fontWeight: 'bold',
-                                    color: '#1f2937',
-                                    position: 'sticky',
-                                    left: 0,
-                                    background: '#f0f9ff'
-                                }}>
-                                </td>
-
-                            </tr>
-                        </tfoot>
-                    </table>
-                )}
-            </div>
-        )
-    }
-
     if (loading) {
         return (
             <div style={{ 
@@ -463,8 +329,6 @@ export default function StatsPage() {
             }}>
                 <div style={{ fontSize: 18, marginBottom: 10 }}>Загрузка данных...</div>
                 <div style={{ fontSize: 14, color: '#999' }}>
-                    {aggregationOptions.find(opt => opt.value === aggregationType)?.icon} 
-                    {' '}
                     {aggregationOptions.find(opt => opt.value === aggregationType)?.label}
                 </div>
             </div>
@@ -550,7 +414,7 @@ export default function StatsPage() {
         )
     }
 
-    const years = data.year || []
+    const years = getAvailableYears()
     const lastIndex = years.length - 1
     const currentAggregation = aggregationOptions.find(opt => opt.value === aggregationType)
     const activeChartOption = chartOptions.find(opt => opt.id === activeChart)
@@ -608,38 +472,58 @@ export default function StatsPage() {
                 marginBottom: 30
             }}>
                 {chartOptions.map(option => {
-                    const value = data[option.id]?.[lastIndex]
-                    const firstValue = data[option.id]?.[0]
-                    const growth = firstValue && value ? ((value - firstValue) / firstValue * 100) : null
+                    const lastValue = getLastAvailableValue(option.id)
+                    const firstValue = getFirstAvailableValue(option.id)
+                    const growth = calculateGrowth(option.id)
+                    const hasData = lastValue !== null && lastValue !== undefined
                     
                     return (
                         <div 
                             key={option.id}
                             style={{ 
                                 padding: 20,
-                                background: activeChart === option.id ? `${option.color}10` : 'white',
+                                background: activeChart === option.id ? `${option.color}10` : (hasData ? 'white' : '#f9fafb'),
                                 borderRadius: 10,
-                                boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s',
+                                boxShadow: hasData ? '0 2px 10px rgba(0,0,0,0.08)' : 'none',
+                                cursor: hasData ? 'pointer' : 'default',
+                                transition: hasData ? 'all 0.3s' : 'none',
                                 border: `2px solid ${activeChart === option.id ? option.color : 'transparent'}`,
-                                borderLeft: `5px solid ${option.color}`
+                                borderLeft: `5px solid ${hasData ? option.color : '#e5e7eb'}`,
+                                opacity: hasData ? 1 : 0.7
                             }}
-                            onClick={() => setActiveChart(option.id)}
+                            onClick={() => hasData && setActiveChart(option.id)}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
-                                    <h4 style={{ margin: '0 0 10px 0', color: option.color, fontSize: 16 }}>
+                                    <h4 style={{ 
+                                        margin: '0 0 10px 0', 
+                                        color: hasData ? option.color : '#9ca3af',
+                                        fontSize: 16
+                                    }}>
                                         {option.label}
+                                        {!hasData && (
+                                            <span style={{ 
+                                                fontSize: 12, 
+                                                marginLeft: 8, 
+                                                color: '#9ca3af',
+                                                fontStyle: 'italic'
+                                            }}>
+                                                (нет данных)
+                                            </span>
+                                        )}
                                     </h4>
-                                    <div style={{ fontSize: 28, fontWeight: 'bold', color: '#1f2937' }}>
-                                        {formatNumber(value, option.id)} {option.unit}
+                                    <div style={{ 
+                                        fontSize: 28, 
+                                        fontWeight: 'bold', 
+                                        color: hasData ? '#1f2937' : '#9ca3af'
+                                    }}>
+                                        {hasData ? formatNumber(lastValue, option.id) : '—'} {hasData && option.unit}
                                     </div>
                                 </div>
                                 <div style={{
                                     padding: '4px 12px',
-                                    background: currentAggregation.color,
-                                    color: 'white',
+                                    background: hasData ? currentAggregation.color : '#e5e7eb',
+                                    color: hasData ? 'white' : '#6b7280',
                                     borderRadius: 12,
                                     fontSize: 12,
                                     fontWeight: 'bold'
@@ -648,7 +532,7 @@ export default function StatsPage() {
                                 </div>
                             </div>
                             
-                            {growth !== null && (
+                            {hasData && growth !== null && (
                                 <div style={{ 
                                     marginTop: 10,
                                     fontSize: 13,
@@ -658,13 +542,21 @@ export default function StatsPage() {
                                     {growth >= 0 ? '↗' : '↘'} {Math.abs(growth).toFixed(1)}% за период
                                 </div>
                             )}
+                            
+                            {!hasData && (
+                                <div style={{ 
+                                    marginTop: 10,
+                                    fontSize: 12,
+                                    color: '#9ca3af',
+                                    fontStyle: 'italic'
+                                }}>
+                                    Данные доступны только до 2024 года
+                                </div>
+                            )}
                         </div>
                     )
                 })}
             </div>
-
-            {/* ТАБЛИЦА СО СТАТИСТИКОЙ */}
-            {renderStatisticsTable()}
 
             {/* График */}
             <div style={{ 
@@ -726,24 +618,48 @@ export default function StatsPage() {
                     marginTop: 20,
                     flexWrap: 'wrap'
                 }}>
-                    {chartOptions.map(option => (
-                        <button
-                            key={option.id}
-                            onClick={() => setActiveChart(option.id)}
-                            style={{
-                                padding: '8px 16px',
-                                background: activeChart === option.id ? option.color : '#f3f4f6',
-                                color: activeChart === option.id ? 'white' : '#374151',
-                                border: 'none',
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                                fontSize: 13,
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            {option.label}
-                        </button>
-                    ))}
+                    {chartOptions.map(option => {
+                        const hasData = getLastAvailableValue(option.id) !== null
+                        return (
+                            <button
+                                key={option.id}
+                                onClick={() => hasData && setActiveChart(option.id)}
+                                disabled={!hasData}
+                                style={{
+                                    padding: '8px 16px',
+                                    background: activeChart === option.id ? option.color : (hasData ? '#f3f4f6' : '#f9fafb'),
+                                    color: activeChart === option.id ? 'white' : (hasData ? '#374151' : '#9ca3af'),
+                                    border: 'none',
+                                    borderRadius: 6,
+                                    cursor: hasData ? 'pointer' : 'default',
+                                    fontSize: 13,
+                                    transition: 'all 0.2s',
+                                    opacity: hasData ? 1 : 0.6
+                                }}
+                            >
+                                {option.label}
+                                {!hasData && ' ⓘ'}
+                            </button>
+                        )
+                    })}
+                </div>
+                
+                {/* Информация */}
+                <div style={{ 
+                    marginTop: 20,
+                    padding: 12,
+                    background: '#f0f9ff',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    color: '#0369a1'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <strong>Информация о данных:</strong>
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 20 }}>
+                        <li>Инвестиции доступны за все годы (2014-2026)</li>
+                        <li>Остальные показатели доступны только до 2023 года включительно</li>
+                    </ul>
                 </div>
             </div>
 
@@ -756,9 +672,6 @@ export default function StatsPage() {
                 fontSize: 14,
                 color: '#374151'
             }}>
-                <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#1f2937' }}>
-                    Пояснение типов агрегации:
-                </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
                     {aggregationOptions.map(option => (
                         <div key={option.value} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

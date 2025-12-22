@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { getFeatureInfo,  getDistrictInfo  } from "../api/api";
 import { colorForRatio } from "../utils/colorScale";
+import { YEARS } from "../config"; // Импортируем YEARS из конфига
 
 function normalizeGeoJSON(geo) {
     function fixCoords(coords) {
@@ -158,8 +159,12 @@ export default function MapView({
     const [selectedId, setSelectedId] = useState(null);
     const [loadingDistricts, setLoadingDistricts] = useState(false);
 
+    // Получаем минимальный год из доступных
+    const minAvailableYear = YEARS.length > 0 ? Math.min(...YEARS) : 2014;
+
     console.log("MapView received:", {
         year,
+        minAvailableYear,
         feature,
         minVal,
         maxVal,
@@ -348,7 +353,6 @@ export default function MapView({
         }
     }, [regionsGeo, districtsGeo, feature, year, isByDistrict, minVal, maxVal]);
 
-
     useEffect(() => {
         if (!containerRef.current) return;
         
@@ -455,9 +459,9 @@ export default function MapView({
                         return "#e5e7eb";
                     }
                     
-                    // Для 2018 года - всегда серый (нет динамики)
-                    if (year === 2018) {
-                        console.log(`2018 year - gray for ${districtName}`);
+                    // Для минимального года - серый цвет (нет динамики)
+                    if (year === minAvailableYear) {
+                        console.log(`${minAvailableYear} год (базовый) - серый цвет для ${districtName}`);
                         return "#e5e7eb";
                     }
                     
@@ -499,164 +503,162 @@ export default function MapView({
                     return color;
                 })
                 .on("click", async (event, d) => {
-                event.stopPropagation();
-                console.log("CLICK ON DISTRICT");
-                
-                const districtName = d.properties.DISTRICT_NAME;
-                
-                if (!districtName) {
-                    console.log("No district name for clicked feature");
-                    return;
-                }
-                
-                console.log("Clicked district:", districtName);
-                
-                // Показываем индикатор загрузки
-                const container = containerRef.current;
-                const loadingDiv = document.createElement("div");
-                loadingDiv.innerHTML = `
-                    <div style="
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        background: rgba(255, 255, 255, 0.8);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        z-index: 1000;
-                    ">
+                    event.stopPropagation();
+                    console.log("CLICK ON DISTRICT");
+                    
+                    const districtName = d.properties.DISTRICT_NAME;
+                    
+                    if (!districtName) {
+                        console.log("No district name for clicked feature");
+                        return;
+                    }
+                    
+                    console.log("Clicked district:", districtName);
+                    
+                    // Показываем индикатор загрузки
+                    const container = containerRef.current;
+                    const loadingDiv = document.createElement("div");
+                    loadingDiv.innerHTML = `
                         <div style="
-                            background: white;
-                            padding: 20px;
-                            border-radius: 8px;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                            text-align: center;
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: rgba(255, 255, 255, 0.8);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 1000;
                         ">
                             <div style="
-                                width: 40px;
-                                height: 40px;
-                                border: 4px solid #f3f3f3;
-                                border-top: 4px solid #3498db;
-                                border-radius: 50%;
-                                margin: 0 auto 15px;
-                                animation: spin 1s linear infinite;
-                            "></div>
-                            <div>Загрузка данных округа...</div>
+                                background: white;
+                                padding: 20px;
+                                border-radius: 8px;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                                text-align: center;
+                            ">
+                                <div style="
+                                    width: 40px;
+                                    height: 40px;
+                                    border: 4px solid #f3f3f3;
+                                    border-top: 4px solid #3498db;
+                                    border-radius: 50%;
+                                    margin: 0 auto 15px;
+                                    animation: spin 1s linear infinite;
+                                "></div>
+                                <div>Загрузка данных округа...</div>
+                            </div>
                         </div>
-                    </div>
-                `;
-                container.appendChild(loadingDiv);
-                
-                try {
-                    const districtArea = areas.find(area => 
-                        area.area_name === districtName
-                    );
+                    `;
+                    container.appendChild(loadingDiv);
                     
-                    if (!districtArea) {
-                        console.log("District not found in areas for:", districtName);
-                        console.log("Available areas:", areas.map(a => a.area_name));
-                        container.removeChild(loadingDiv);
-                        return;
-                    }
-                    
-                    console.log("Found district in areas:", districtArea);
-                    
-                    let fullDistrictData = null;
                     try {
-                        console.log(`Загрузка данных округа ID ${districtArea.id}, год ${year}...`);
+                        const districtArea = areas.find(area => 
+                            area.area_name === districtName
+                        );
                         
-                        fullDistrictData = await getDistrictInfo(districtArea.id, year, 'sum');
-                        
-                        console.log("Данные округа (sum):", fullDistrictData);
-                        
-                    } catch (apiError) {
-                        console.error("Ошибка загрузки данных округа:", apiError);
-                        container.removeChild(loadingDiv);
-                        return;
-                    }
-                    
-                    const districtDataMap = new Map();
-                    districtFeaturesData.forEach(f => {
-                        if (f.area_name) {
-                            districtDataMap.set(f.area_name, f);
+                        if (!districtArea) {
+                            console.log("District not found in areas for:", districtName);
+                            console.log("Available areas:", areas.map(a => a.area_name));
+                            container.removeChild(loadingDiv);
+                            return;
                         }
-                    });
-                    
-                    const districtFeatureData = districtDataMap.get(districtName);
-                    console.log("Данные по основному показателю:", districtFeatureData);
-                    
-                    //делим зарплату и безработицу на количество регионов
-                    // Количество регионов в каждом округе, которые в джисоне
-                    const districtsWithRegionsCount = {
-                        'Центральный Федеральный округ': 18,
-                        'Северо-Западный Федеральный округ': 11,
-                        'Южный Федеральный округ': 8,
-                        'Северо-Кавказский Федеральный округ': 7,
-                        'Приволжский Федеральный округ': 14,
-                        'Уральский Федеральный округ': 6,
-                        'Сибирский Федеральный округ': 10,
-                        'Дальневосточный Федеральный округ': 11
-                    };
-                    
-                    const regionCount = districtsWithRegionsCount[districtName] || 1;
-                    console.log(`Количество регионов в округе ${districtName}: ${regionCount}`);
-                    
-                    // Создаем скорректированные данные
-                    const correctedDistrictData = {
-                        ...fullDistrictData,
-                        average_salary: fullDistrictData?.average_salary ? 
-                            Math.round(fullDistrictData.average_salary / regionCount * 10) / 10 : null,
-                        unemployment: fullDistrictData?.unemployment ? 
-                            Math.round(fullDistrictData.unemployment / regionCount * 10) / 10 : null
-                    };
-                    
-                    console.log("Скорректированные данные:", correctedDistrictData);
-                    console.log(`Зарплата до коррекции: ${fullDistrictData?.average_salary}, после: ${correctedDistrictData.average_salary}`);
-                    console.log(`Безработица до коррекции: ${fullDistrictData?.unemployment}, после: ${correctedDistrictData.unemployment}`);
-                    
-                    const districtData = {
-                        id: districtArea.id,
-                        area_name: districtName,
-                        region_name: districtName,
-                        year: year,
-                        isDistrict: true,
                         
-                        feature_value: districtFeatureData?.feature_value || correctedDistrictData?.[feature] || null,
-                        feature_ratio: districtFeatureData?.feature_ratio || null,
+                        console.log("Found district in areas:", districtArea);
                         
-                        investments: correctedDistrictData?.investments || null,
-                        grp: correctedDistrictData?.grp || null,
-                        population: correctedDistrictData?.population || null,
-                        average_salary: correctedDistrictData?.average_salary || null,
-                        unemployment: correctedDistrictData?.unemployment || null,
-                        crimes: correctedDistrictData?.crimes || null,
-                        retail_turnover: correctedDistrictData?.retail_turnover || null,
-                        cash_expenses: correctedDistrictData?.cash_expenses || null,
-                        scientific_research: correctedDistrictData?.scientific_research || null,
-                        district_name: correctedDistrictData?.district_name || districtName
-                    };
-                    
-                    console.log("Итоговые данные для модального окна:", districtData);
-                    
-                    setSelectedId(String(districtArea.id));
-                    
-                    if (onRegionSelect) {
-                        onRegionSelect(districtData);
-                    } else {
-                        console.error("onRegionSelect is not defined!");
+                        let fullDistrictData = null;
+                        try {
+                            console.log(`Загрузка данных округа ID ${districtArea.id}, год ${year}...`);
+                            
+                            fullDistrictData = await getDistrictInfo(districtArea.id, year, 'sum');
+                            
+                            console.log("Данные округа (sum):", fullDistrictData);
+                            
+                        } catch (apiError) {
+                            console.error("Ошибка загрузки данных округа:", apiError);
+                            container.removeChild(loadingDiv);
+                            return;
+                        }
+                        
+                        const districtDataMap = new Map();
+                        districtFeaturesData.forEach(f => {
+                            if (f.area_name) {
+                                districtDataMap.set(f.area_name, f);
+                            }
+                        });
+                        
+                        const districtFeatureData = districtDataMap.get(districtName);
+                        console.log("Данные по основному показателю:", districtFeatureData);
+                        
+                        // Делим зарплату и безработицу на количество регионов
+                        const districtsWithRegionsCount = {
+                            'Центральный Федеральный округ': 18,
+                            'Северо-Западный Федеральный округ': 11,
+                            'Южный Федеральный округ': 8,
+                            'Северо-Кавказский Федеральный округ': 7,
+                            'Приволжский Федеральный округ': 14,
+                            'Уральский Федеральный округ': 6,
+                            'Сибирский Федеральный округ': 10,
+                            'Дальневосточный Федеральный округ': 11
+                        };
+                        
+                        const regionCount = districtsWithRegionsCount[districtName] || 1;
+                        console.log(`Количество регионов в округе ${districtName}: ${regionCount}`);
+                        
+                        // Создаем скорректированные данные
+                        const correctedDistrictData = {
+                            ...fullDistrictData,
+                            average_salary: fullDistrictData?.average_salary ? 
+                                Math.round(fullDistrictData.average_salary / regionCount * 10) / 10 : null,
+                            unemployment: fullDistrictData?.unemployment ? 
+                                Math.round(fullDistrictData.unemployment / regionCount * 10) / 10 : null
+                        };
+                        
+                        console.log("Скорректированные данные:", correctedDistrictData);
+                        
+                        const districtData = {
+                            id: districtArea.id,
+                            area_name: districtName,
+                            region_name: districtName,
+                            year: year,
+                            isDistrict: true,
+                            is_base_year: year === minAvailableYear, // Используем minAvailableYear
+                            
+                            feature_value: districtFeatureData?.feature_value || correctedDistrictData?.[feature] || null,
+                            feature_ratio: districtFeatureData?.feature_ratio || null,
+                            
+                            investments: correctedDistrictData?.investments || null,
+                            grp: correctedDistrictData?.grp || null,
+                            population: correctedDistrictData?.population || null,
+                            average_salary: correctedDistrictData?.average_salary || null,
+                            unemployment: correctedDistrictData?.unemployment || null,
+                            crimes: correctedDistrictData?.crimes || null,
+                            retail_turnover: correctedDistrictData?.retail_turnover || null,
+                            cash_expenses: correctedDistrictData?.cash_expenses || null,
+                            scientific_research: correctedDistrictData?.scientific_research || null,
+                            district_name: correctedDistrictData?.district_name || districtName
+                        };
+                        
+                        console.log("Итоговые данные для модального окна:", districtData);
+                        
+                        setSelectedId(String(districtArea.id));
+                        
+                        if (onRegionSelect) {
+                            onRegionSelect(districtData);
+                        } else {
+                            console.error("onRegionSelect is not defined!");
+                        }
+                        
+                    } catch (error) {
+                        console.error("Error processing district click:", error);
+                    } finally {
+                        // Убираем индикатор загрузки
+                        if (container && container.contains(loadingDiv)) {
+                            container.removeChild(loadingDiv);
+                        }
                     }
-                    
-                } catch (error) {
-                    console.error("Error processing district click:", error);
-                } finally {
-                    // Убираем индикатор загрузки
-                    if (container && container.contains(loadingDiv)) {
-                        container.removeChild(loadingDiv);
-                    }
-                }
-            })
+                })
                 .on("mouseover", function(event, d) {
                     d3.select(this)
                         .attr("stroke-width", 3.0)
@@ -675,9 +677,9 @@ export default function MapView({
                             tooltipText += `\n${feature}: ${formattedValue}`;
                         }
                         
-                        // Для 2018 года динамики нет
-                        if (year === 2018) {
-                            tooltipText += `\nДинамика: базовый год`;
+                        // Для минимального года динамики нет
+                        if (year === minAvailableYear) {
+                            tooltipText += `\nДинамика: базовый год (${minAvailableYear})`;
                         } else if (featureData.feature_ratio !== undefined && featureData.feature_ratio !== null) {
                             const ratioValue = Number(featureData.feature_ratio);
                             const sign = ratioValue > 0 ? '+' : '';
@@ -728,7 +730,7 @@ export default function MapView({
             });
 
         } else {
-            //РЕГИОНЫ
+            // РЕГИОНЫ
             
             console.log("RENDERING REGIONS MODE");
             
@@ -776,8 +778,8 @@ export default function MapView({
                         return "#e5e7eb";
                     }
                     
-                    // Для 2018 года - всегда серый (нет динамики)
-                    if (year === 2018) {
+                    // Для минимального года - серый цвет (нет динамики)
+                    if (year === minAvailableYear) {
                         return "#e5e7eb";
                     }
                     
@@ -847,6 +849,7 @@ export default function MapView({
                         area_name: foundArea.area_name,
                         region_name: russianName,
                         year: year,
+                        is_base_year: year === minAvailableYear, // Используем minAvailableYear
                         // Копируем все данные из featureData
                         ...(featureData || {}),
                         feature_value: featureData?.feature_value || null,
@@ -882,8 +885,8 @@ export default function MapView({
                             tooltipText += `\n${feature}: ${formattedValue}`;
                         }
                         
-                        if (year === 2018) {
-                            tooltipText += `\nДинамика: базовый год`;
+                        if (year === minAvailableYear) {
+                            tooltipText += `\nДинамика: базовый год (${minAvailableYear})`;
                         } else if (featureData.feature_ratio !== undefined && featureData.feature_ratio !== null) {
                             const ratioValue = Number(featureData.feature_ratio);
                             const sign = ratioValue > 0 ? '+' : '';
@@ -950,7 +953,8 @@ export default function MapView({
     }, [
         regionsGeo, districtsGeo, featuresData, districtFeaturesData, 
         year, feature, areas, onRegionSelect, selectedId, 
-        showPos, showNeg, showStable, isByDistrict, loadingDistricts
+        showPos, showNeg, showStable, isByDistrict, loadingDistricts,
+        minAvailableYear // Добавляем в зависимости
     ]);
 
     if (geoError) return <div className="panel error-panel">{geoError}</div>;
@@ -962,7 +966,7 @@ export default function MapView({
             style={{ 
                 width: "100%", 
                 height: "85vh",
-                border: "1px solid #e5e7eb",
+                border: "1px solid #e5e5e5",
                 borderRadius: "8px",
                 overflow: "hidden",
                 position: "relative"
