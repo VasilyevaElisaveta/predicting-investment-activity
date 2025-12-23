@@ -59,19 +59,16 @@
         group: "{{ ansible_user }}"
 
     - name: Pull images
-      become: false
       command: docker compose pull
       args:
         chdir: "{{ work_dir }}"
 
     - name: Start docker compose
-      become: false
       command: docker compose up -d
       args:
         chdir: "{{ work_dir }}"
 
     - name: Run data load script inside backend container
-      become: false
       command: "docker compose exec backend uv run -m app.async_load_data --reset --file-name {{ file_name }}"
       args:
         chdir: "{{ work_dir }}"
